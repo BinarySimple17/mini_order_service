@@ -26,6 +26,10 @@ public class Order {
     @Column(name = "username", nullable = false)
     private String username;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+//    @OrderBy
+    private List<OrderPosition> orderPositions = new ArrayList<>();
+
     @Column(name = "total_cost", precision = 19, scale = 2, nullable = false)
     private BigDecimal totalCost;
 

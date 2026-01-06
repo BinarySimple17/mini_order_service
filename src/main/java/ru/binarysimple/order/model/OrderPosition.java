@@ -29,6 +29,10 @@ public class OrderPosition {
     @ToStringExclude
     private Order order;
 
+    public void setOrder(Order order) {
+        this.order = order;
+    }
+
     @Column(name = "product_id", nullable = false)
     private Long productId;
 

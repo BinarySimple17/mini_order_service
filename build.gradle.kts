@@ -38,6 +38,8 @@ dependencies {
     compileOnly("org.mapstruct:mapstruct:1.6.0")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.6.0")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
 }
 
 tasks.register("printVersion") {

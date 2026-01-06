@@ -1,0 +1,109 @@
+package ru.binarysimple.order.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import ru.binarysimple.order.dto.OrderDto;
+import ru.binarysimple.order.mapper.OrderMapper;
+import ru.binarysimple.order.model.Order;
+import ru.binarysimple.order.model.OrderPosition;
+import ru.binarysimple.order.repository.OrderRepository;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+
+@RequiredArgsConstructor
+@Service
+@Transactional
+public class OrderServiceImpl implements OrderService {
+
+    private final OrderMapper orderMapper;
+
+    private final OrderRepository orderRepository;
+
+    private final ObjectMapper objectMapper;
+
+    @Override
+    public Page<OrderDto> getAll(Pageable pageable) {
+        Page<Order> orders = orderRepository.findAll(pageable);
+        return orders.map(orderMapper::toOrderDto);
+    }
+
+    @Override
+    public OrderDto getOne(Long id) {
+        Optional<Order> orderOptional = orderRepository.findById(id);
+        return orderMapper.toOrderDto(orderOptional.orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Entity with id `%s` not found".formatted(id))));
+    }
+
+    @Override
+    public List<OrderDto> getMany(List<Long> ids) {
+        List<Order> orders = orderRepository.findAllById(ids);
+        return orders.stream()
+                .map(orderMapper::toOrderDto)
+                .toList();
+    }
+
+    @Override
+    public OrderDto create(OrderDto dto) {
+        Order order = orderMapper.toEntity(dto);
+        
+
+        // Устанавливаем связь между заказом и позициями
+        order.getOrderPositions().forEach(position -> position.setOrder(order));
+        
+        Order resultOrder = orderRepository.save(order);
+        return orderMapper.toOrderDto(resultOrder);
+    }
+
+    @Override
+    public OrderDto patch(Long id, JsonNode patchNode) throws IOException {
+        Order order = orderRepository.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Entity with id `%s` not found".formatted(id)));
+
+        OrderDto orderDto = orderMapper.toOrderDto(order);
+        objectMapper.readerForUpdating(orderDto).readValue(patchNode);
+        orderMapper.updateWithNull(orderDto, order);
+
+        Order resultOrder = orderRepository.save(order);
+        return orderMapper.toOrderDto(resultOrder);
+    }
+
+    @Override
+    public List<Long> patchMany(List<Long> ids, JsonNode patchNode) throws IOException {
+        Collection<Order> orders = orderRepository.findAllById(ids);
+
+        for (Order order : orders) {
+            OrderDto orderDto = orderMapper.toOrderDto(order);
+            objectMapper.readerForUpdating(orderDto).readValue(patchNode);
+            orderMapper.updateWithNull(orderDto, order);
+        }
+
+        List<Order> resultOrders = orderRepository.saveAll(orders);
+        return resultOrders.stream()
+                .map(Order::getId)
+                .toList();
+    }
+
+    @Override
+    public OrderDto delete(Long id) {
+        Order order = orderRepository.findById(id).orElse(null);
+        if (order != null) {
+            orderRepository.delete(order);
+        }
+        return orderMapper.toOrderDto(order);
+    }
+
+    @Override
+    public void deleteMany(List<Long> ids) {
+        orderRepository.deleteAllById(ids);
+    }
+}
