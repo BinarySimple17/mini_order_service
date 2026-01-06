@@ -3,7 +3,6 @@ package ru.binarysimple.order.model;
 import lombok.Getter;
 import lombok.ToString;
 
-@ToString
 @Getter
 public enum OrderStatus {
     NEW("New"),
@@ -15,5 +14,10 @@ public enum OrderStatus {
 
     OrderStatus(String title) {
         this.title = title;
+    }
+
+    @Override
+    public String toString() {
+        return title;
     }
 }

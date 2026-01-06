@@ -1,7 +1,9 @@
 package ru.binarysimple.order.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -9,7 +11,12 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @Entity
-@Table(name = "order_position")
+@Table(
+        name = "order_position",
+        indexes = @Index(name = "idx_order", columnList = "order_id")
+        )
+@NoArgsConstructor
+@AllArgsConstructor
 public class OrderPosition {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

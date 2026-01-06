@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.31.xsd"
         objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
-    <changeSet id="1767713430378-1" author="Professional (generated)">
+    <changeSet id="1767715245033-1" author="Professional (generated)">
         <createTable tableName="order_position">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_order_position"/>
@@ -22,7 +22,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1767713430378-2" author="Professional (generated)">
+    <changeSet id="1767715245033-2" author="Professional (generated)">
         <createTable tableName="orders">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_orders"/>
@@ -43,10 +43,14 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1767713430378-3" author="Professional (generated)">
+    <changeSet id="1767715245033-3" author="Professional (generated)">
         <addForeignKeyConstraint baseColumnNames="order_id" baseTableName="order_position"
                                  constraintName="FK_ORDER_POSITION_ON_ORDER" referencedColumnNames="id"
                                  referencedTableName="orders"/>
+
+        <createIndex indexName="idx_order" tableName="order_position">
+            <column name="order_id"/>
+        </createIndex>
     </changeSet>
 
 </databaseChangeLog>
