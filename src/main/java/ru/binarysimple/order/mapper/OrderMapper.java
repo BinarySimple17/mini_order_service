@@ -2,12 +2,7 @@ package ru.binarysimple.order.mapper;
 
 import org.mapstruct.*;
 import ru.binarysimple.order.dto.OrderDto;
-import ru.binarysimple.order.dto.OrderPositionDto;
 import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.model.OrderPosition;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING,
         uses = OrderPositionMapper.class)

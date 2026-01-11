@@ -43,10 +43,6 @@ public class Order {
     @Column(name = "order_status", length = 20)
     private OrderStatus orderStatus;
 
-//    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-//    @OrderBy("id")
-//    private List<OrderPosition> orderPositions = new ArrayList<>();
-
     @Column(name = "delivery_id", nullable = false)
     private Long deliveryId;
 
@@ -54,5 +50,8 @@ public class Order {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (orderStatus == null) {
+            orderStatus = OrderStatus.NEW; // или другой default
+        }
     }
 }

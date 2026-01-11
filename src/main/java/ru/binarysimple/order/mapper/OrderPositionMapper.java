@@ -11,7 +11,6 @@ import ru.binarysimple.order.dto.OrderPositionDto;
 @Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)
 public interface OrderPositionMapper {
 
-
     OrderPosition toEntity(OrderPositionDto orderPositionDto);
 
     OrderPositionDto toOrderPositionDto(OrderPosition orderPosition);

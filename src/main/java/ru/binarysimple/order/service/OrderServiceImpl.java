@@ -2,6 +2,7 @@ package ru.binarysimple.order.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -68,12 +69,11 @@ public class OrderServiceImpl implements OrderService {
     public OrderDto patch(Long id, JsonNode patchNode) throws IOException {
         Order order = orderRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Entity with id `%s` not found".formatted(id)));
+        
+        ObjectReader reader = objectMapper.readerForUpdating(order);
+        Order updated = reader.readValue(patchNode);
 
-        OrderDto orderDto = orderMapper.toOrderDto(order);
-        objectMapper.readerForUpdating(orderDto).readValue(patchNode);
-        orderMapper.updateWithNull(orderDto, order);
-
-        Order resultOrder = orderRepository.save(order);
+        Order resultOrder = orderRepository.save(updated);
         return orderMapper.toOrderDto(resultOrder);
     }
 
