@@ -10,7 +10,9 @@ import ru.binarysimple.order.client.UserServiceClient;
 import ru.binarysimple.order.kafka.OrderEvent;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.NotificationContact;
+import ru.binarysimple.order.model.NotificationType;
 import ru.binarysimple.order.model.Order;
+import ru.binarysimple.order.model.OrderStatus;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -52,6 +54,8 @@ public class NotificationServiceImpl implements NotificationService {
         OrderEvent event = mapper.toOrderEvent(order);
         event.setContact(contact);
         event.setParentId(order.getId());
+        event.setOrderId(order.getId());
+        event.setNotificationType(NotificationType.DEFAULT);
 
         CompletableFuture<SendResult<String, OrderEvent>> future =
                 kafkaTemplate.send(orderTopic, order.getUsername(), event);
