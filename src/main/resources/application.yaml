@@ -32,7 +32,6 @@ spring:
     properties:
       security.protocol: SASL_PLAINTEXT
       sasl.mechanism: PLAIN
-#      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
       sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
 
     producer:

@@ -60,7 +60,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
     public OrderDto create(OrderDto dto) {
         Order order = orderMapper.toEntity(dto);
         
@@ -72,6 +71,7 @@ public class OrderServiceImpl implements OrderService {
 
         // публикуем событие - оно будет обработано ПОСЛЕ коммита
         // в этом событии топравка сообщения в кафку
+        // только для transactional
         eventPublisher.publishEvent(new OrderCreatedEvent(resultOrder, Class.class.getName()));
 
         return orderMapper.toOrderDto(resultOrder);
