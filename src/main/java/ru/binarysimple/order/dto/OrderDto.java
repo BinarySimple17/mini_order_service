@@ -23,7 +23,7 @@ public class OrderDto {
     @NotNull
     Long shopId;
     @NotNull
-    OrderStatus orderStatus;
+    OrderStatus status;
     @NotNull
     Long deliveryId;
     @NotNull

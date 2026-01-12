@@ -41,7 +41,7 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "order_status", length = 20)
-    private OrderStatus orderStatus;
+    private OrderStatus status;
 
     @Column(name = "delivery_id", nullable = false)
     private Long deliveryId;
@@ -50,8 +50,8 @@ public class Order {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        if (orderStatus == null) {
-            orderStatus = OrderStatus.NEW; // или другой default
+        if (status == null) {
+            status = OrderStatus.NEW; // или другой default
         }
     }
 }

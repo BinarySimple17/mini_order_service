@@ -26,12 +26,25 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     enabled: true
 
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    properties:
+      security.protocol: SASL_PLAINTEXT
+      sasl.mechanism: PLAIN
+#      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
+      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 server:
   port: 8080
 
 endpoints:
   api-gateway: http://localhost:8090
+  users-service: http://localhost:8100
 
 logging:
   level:
@@ -51,6 +64,7 @@ management:
   endpoint:
     health:
       show-details: always
+      exclude: kafka
   metrics:
     tags:
       application: ${spring.application.name}
@@ -64,3 +78,8 @@ management:
 info:
   app:
     name: "Order Service"
+
+app:
+  kafka:
+    topics:
+      order-events: order.events

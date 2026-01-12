@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import ru.binarysimple.order.dto.OrderDto;
+import ru.binarysimple.order.event.OrderCreatedEvent;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderPosition;
@@ -31,6 +33,10 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
 
     private final ObjectMapper objectMapper;
+
+//    private final NotificationService notificationService;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public Page<OrderDto> getAll(Pageable pageable) {
@@ -54,6 +60,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public OrderDto create(OrderDto dto) {
         Order order = orderMapper.toEntity(dto);
         
@@ -62,6 +69,11 @@ public class OrderServiceImpl implements OrderService {
         order.getOrderPositions().forEach(position -> position.setOrder(order));
         
         Order resultOrder = orderRepository.save(order);
+
+        // публикуем событие - оно будет обработано ПОСЛЕ коммита
+        // в этом событии топравка сообщения в кафку
+        eventPublisher.publishEvent(new OrderCreatedEvent(resultOrder, Class.class.getName()));
+
         return orderMapper.toOrderDto(resultOrder);
     }
 

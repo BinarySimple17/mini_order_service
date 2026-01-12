@@ -15,11 +15,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-//@RequiredArgsConstructor
 @Component
 public class UserAuthFilter extends OncePerRequestFilter {
-
-//    private final SecurityProperties securityProperties;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -35,7 +32,6 @@ public class UserAuthFilter extends OncePerRequestFilter {
             try {
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         userIdHeader, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-//                auth.setAuthenticated(true); // ← явно помечаем как аутентифицированного
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (IllegalArgumentException e) {
                 logger.warn("Invalid X-Username header: " + userIdHeader);

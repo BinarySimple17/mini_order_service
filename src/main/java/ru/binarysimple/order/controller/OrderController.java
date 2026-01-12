@@ -2,8 +2,11 @@ package ru.binarysimple.order.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import ru.binarysimple.order.dto.OrderDto;
+import ru.binarysimple.order.service.NotificationService;
 import ru.binarysimple.order.service.OrderService;
 
 @RestController
@@ -20,7 +23,10 @@ public class OrderController {
     }
 
     @PostMapping
-    public OrderDto create(@RequestBody @Valid OrderDto dto) {
+    public OrderDto create(@RequestHeader("X-Username") String currentUsername, @RequestBody @Valid OrderDto dto) {
+        if (!currentUsername.equals(dto.getUsername())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         return orderService.create(dto);
     }
 
