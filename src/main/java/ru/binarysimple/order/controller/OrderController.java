@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ru.binarysimple.order.dto.OrderDto;
+import ru.binarysimple.order.dto.OrderResultDto;
+import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.service.NotificationService;
 import ru.binarysimple.order.service.OrderService;
 
@@ -18,12 +20,12 @@ public class OrderController {
 
 
     @GetMapping("/{id}")
-    public OrderDto getOne(@PathVariable Long id) {
+    public OrderResultDto getOne(@PathVariable Long id) {
         return orderService.getOne(id);
     }
 
     @PostMapping
-    public OrderDto create(@RequestHeader("X-Username") String currentUsername, @RequestBody @Valid OrderDto dto) {
+    public OrderResultDto create(@RequestHeader("X-Username") String currentUsername, @RequestBody @Valid OrderDto dto) {
         if (!currentUsername.equals(dto.getUsername())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }

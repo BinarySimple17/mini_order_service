@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import ru.binarysimple.order.dto.OrderDto;
+import ru.binarysimple.order.dto.OrderResultDto;
 import ru.binarysimple.order.event.OrderCreatedEvent;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
@@ -39,28 +40,28 @@ public class OrderServiceImpl implements OrderService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    public Page<OrderDto> getAll(Pageable pageable) {
+    public Page<OrderResultDto> getAll(Pageable pageable) {
         Page<Order> orders = orderRepository.findAll(pageable);
-        return orders.map(orderMapper::toOrderDto);
+        return orders.map(orderMapper::toOrderResultDto);
     }
 
     @Override
-    public OrderDto getOne(Long id) {
+    public OrderResultDto getOne(Long id) {
         Optional<Order> orderOptional = orderRepository.findById(id);
-        return orderMapper.toOrderDto(orderOptional.orElseThrow(() ->
+        return orderMapper.toOrderResultDto(orderOptional.orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Entity with id `%s` not found".formatted(id))));
     }
 
     @Override
-    public List<OrderDto> getMany(List<Long> ids) {
+    public List<OrderResultDto> getMany(List<Long> ids) {
         List<Order> orders = orderRepository.findAllById(ids);
         return orders.stream()
-                .map(orderMapper::toOrderDto)
+                .map(orderMapper::toOrderResultDto)
                 .toList();
     }
 
     @Override
-    public OrderDto create(OrderDto dto) {
+    public OrderResultDto create(OrderDto dto) {
         Order order = orderMapper.toEntity(dto);
         
 
@@ -74,11 +75,11 @@ public class OrderServiceImpl implements OrderService {
         // только для transactional
         eventPublisher.publishEvent(new OrderCreatedEvent(resultOrder, Class.class.getName()));
 
-        return orderMapper.toOrderDto(resultOrder);
+        return orderMapper.toOrderResultDto(resultOrder);
     }
 
     @Override
-    public OrderDto patch(Long id, JsonNode patchNode) throws IOException {
+    public OrderResultDto patch(Long id, JsonNode patchNode) throws IOException {
         Order order = orderRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Entity with id `%s` not found".formatted(id)));
         
@@ -86,7 +87,7 @@ public class OrderServiceImpl implements OrderService {
         Order updated = reader.readValue(patchNode);
 
         Order resultOrder = orderRepository.save(updated);
-        return orderMapper.toOrderDto(resultOrder);
+        return orderMapper.toOrderResultDto(resultOrder);
     }
 
     @Override
@@ -106,12 +107,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderDto delete(Long id) {
+    public OrderResultDto delete(Long id) {
         Order order = orderRepository.findById(id).orElse(null);
         if (order != null) {
             orderRepository.delete(order);
         }
-        return orderMapper.toOrderDto(order);
+        return orderMapper.toOrderResultDto(order);
     }
 
     @Override
