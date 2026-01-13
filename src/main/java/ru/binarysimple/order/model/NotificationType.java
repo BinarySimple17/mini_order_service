@@ -1,6 +1,7 @@
 package ru.binarysimple.order.model;
 
 public enum NotificationType {
+    INFO("Info"),
     SUCCESS("Success"),
     FAIL("Fail"),
     DEFAULT("Default");
