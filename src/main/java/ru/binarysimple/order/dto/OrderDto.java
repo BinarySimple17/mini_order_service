@@ -24,7 +24,6 @@ public class OrderDto {
     Long shopId;
     @NotNull
     OrderStatus status;
-    @NotNull
     Long deliveryId;
     @NotNull
     List<OrderPositionDto> orderPositions;
