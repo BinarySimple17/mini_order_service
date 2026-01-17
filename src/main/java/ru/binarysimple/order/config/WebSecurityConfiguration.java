@@ -30,7 +30,8 @@ public class WebSecurityConfiguration {
                         "/swagger-ui/**",
                         "/v3/api-docs",
                         "/v3/api-docs/**",
-                        "/webjars/**"
+                        "/webjars/**",
+                        "/error"
                 ).permitAll()
                 .anyRequest().authenticated());
         http.headers(Customizer.withDefaults());

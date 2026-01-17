@@ -44,6 +44,7 @@ server:
 endpoints:
   api-gateway: http://localhost:8090
   users-service: http://localhost:8100
+  billing-service: http://localhost:8110
 
 logging:
   level:

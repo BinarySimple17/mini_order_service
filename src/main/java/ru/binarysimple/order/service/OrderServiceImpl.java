@@ -11,12 +11,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import ru.binarysimple.order.client.BillingServiceClient;
+import ru.binarysimple.order.dto.OperationDto;
 import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
 import ru.binarysimple.order.event.OrderCreatedEvent;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderPosition;
+import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.repository.OrderRepository;
 
 import java.io.IOException;
@@ -35,7 +38,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final ObjectMapper objectMapper;
 
-//    private final NotificationService notificationService;
+    private final BillingServiceClient billingServiceClient;
 
     private final ApplicationEventPublisher eventPublisher;
 
@@ -67,7 +70,14 @@ public class OrderServiceImpl implements OrderService {
 
         // Устанавливаем связь между заказом и позициями
         order.getOrderPositions().forEach(position -> position.setOrder(order));
-        
+
+        try {
+            OperationDto operation = billingServiceClient.makePayment(order);
+        } catch (Exception e) {
+            order.setStatus(OrderStatus.FAILED);
+        }
+
+
         Order resultOrder = orderRepository.save(order);
 
         // публикуем событие - оно будет обработано ПОСЛЕ коммита

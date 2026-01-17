@@ -46,12 +46,14 @@ public class Order {
     @Column(name = "delivery_id", nullable = false)
     private Long deliveryId;
 
-
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (status == null) {
             status = OrderStatus.NEW; // или другой default
+        }
+        if (deliveryId == null) {
+            deliveryId = 0L;
         }
     }
 }
