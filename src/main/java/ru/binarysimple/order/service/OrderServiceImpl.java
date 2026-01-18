@@ -16,6 +16,7 @@ import ru.binarysimple.order.dto.OperationDto;
 import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
 import ru.binarysimple.order.event.OrderCreatedEvent;
+import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderPosition;
@@ -73,6 +74,8 @@ public class OrderServiceImpl implements OrderService {
 
         try {
             OperationDto operation = billingServiceClient.makePayment(order);
+        } catch (BillingServiceException billingServiceException){
+            order.setStatus(OrderStatus.INSUFFICIENT_FUNDS);
         } catch (Exception e) {
             order.setStatus(OrderStatus.FAILED);
         }

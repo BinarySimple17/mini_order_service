@@ -6,6 +6,8 @@ import lombok.ToString;
 @Getter
 public enum OrderStatus {
     NEW("New"),
+    DELIVERY_FAILED("Delivery failed"),
+    INSUFFICIENT_FUNDS("Insufficient funds"),
     FAILED("Failed"),
     IN_PROGRESS("In progress"),
     DONE("Done"),

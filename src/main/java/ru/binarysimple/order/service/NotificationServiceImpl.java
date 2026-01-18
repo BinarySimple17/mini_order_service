@@ -55,7 +55,13 @@ public class NotificationServiceImpl implements NotificationService {
         event.setContact(contact);
         event.setParentId(order.getId());
         event.setOrderId(order.getId());
-        event.setNotificationType(NotificationType.SUCCESS);
+
+        switch (order.getStatus()) {
+            case FAILED, DELIVERY_FAILED, INSUFFICIENT_FUNDS -> event.setNotificationType(NotificationType.FAIL);
+            case NEW, IN_PROGRESS, DONE, CANCELED -> event.setNotificationType(NotificationType.SUCCESS);
+            default -> event.setNotificationType(NotificationType.DEFAULT);
+        }
+
 
         CompletableFuture<SendResult<String, OrderEvent>> future =
                 kafkaTemplate.send(orderTopic, order.getUsername(), event);
