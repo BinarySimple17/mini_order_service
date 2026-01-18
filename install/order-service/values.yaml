@@ -99,13 +99,13 @@ resources: {}
   #   memory: 128Mi
 
 liveness:
-  delay: 15
-  timeout: 10
+  delay: 30
+  timeout: 20
   path: /actuator/health/liveness
 
 readiness:
-  delay: 15
-  timeout: 10
+  delay: 30
+  timeout: 20
   path: /actuator/health/readiness
 
 autoscaling:
@@ -173,16 +173,24 @@ postgresql:
   architecture: "standalone"
 
 endpoints:
-  usersServiceRName: "hw6"
-  usersServiceHost: "users-service"
-  usersServiceSpace: "default"
-  usersServicePort: "80"
+  users:
+    release: "hw6"
+    host: "users-service"
+    space: "default"
+    port: "80"
   # api-gateway: "gateway-service:8080"
-  apiGatewayRName: "hw6-api"
-  apiGatewayHost: "gateway-service"
-  apiGatewaySpace: "default"
-  apiGatewayPort: "8080"
-  kafkaRName: ""
-  kafkaHost: "kafka"
-  kafkaSpace: "default"
-  kafkaPort: "9092"
+  gateway:
+    release: "hw6-api"
+    host: "gateway-service"
+    space: "default"
+    port: "8080"
+  kafka:
+    relese: ""
+    host: "kafka"
+    space: "default"
+    port: "9092"
+  bill:
+    release: "hw7-bill"
+    host: "billing-service"
+    space: "default"
+    port: "8080"

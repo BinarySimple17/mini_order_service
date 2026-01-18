@@ -25,7 +25,7 @@ data:
         enabled: true
 
       kafka:
-        bootstrap-servers: {{ .Values.endpoints.kafkaHost }}.{{ .Values.endpoints.kafkaSpace }}.svc.cluster.local:{{ .Values.endpoints.kafkaPort }}
+        bootstrap-servers: {{ .Values.endpoints.kafka.host }}.{{ .Values.endpoints.kafka.space }}.svc.cluster.local:{{ .Values.endpoints.kafka.port }}
         properties:
           security.protocol: SASL_PLAINTEXT
           sasl.mechanism: PLAIN
@@ -48,5 +48,6 @@ data:
             name: Support Team
             email: support@example.com
     endpoints:
-      users-service: http://{{ .Values.endpoints.usersServiceRName }}-{{ .Values.endpoints.usersServiceHost }}.{{ .Values.endpoints.usersServiceSpace }}.svc.cluster.local:{{ .Values.endpoints.usersServicePort }}
-      api-gateway: http://{{ .Values.endpoints.apiGatewayRName }}-{{ .Values.endpoints.apiGatewayHost }}.{{ .Values.endpoints.apiGatewaySpace }}.svc.cluster.local:{{ .Values.endpoints.apiGatewayPort }}
+      users-service: http://{{ .Values.endpoints.users.release }}-{{ .Values.endpoints.users.host }}.{{ .Values.endpoints.users.space }}.svc.cluster.local:{{ .Values.endpoints.users.port }}
+      api-gateway: http://{{ .Values.endpoints.gateway.release }}-{{ .Values.endpoints.gateway.host }}.{{ .Values.endpoints.gateway.space }}.svc.cluster.local:{{ .Values.endpoints.gateway.port }}
+      billing-service: http://{{ .Values.endpoints.bill.release }}-{{ .Values.endpoints.bill.host }}.{{ .Values.endpoints.bill.space }}.svc.cluster.local:{{ .Values.endpoints.bill.port }}
