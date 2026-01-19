@@ -15,6 +15,7 @@ import ru.binarysimple.order.dto.OperationRequest;
 import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.model.OperationType;
 import ru.binarysimple.order.model.Order;
+import ru.binarysimple.order.model.OrderStatus;
 
 import java.net.URI;
 
@@ -71,6 +72,8 @@ public class BillingServiceClient {
                     .body(OperationDto.class);
             log.info("Successfully made payment for: {}", order.getUsername());
             return operation;
+        } catch (BillingServiceException billingServiceException) {
+            throw billingServiceException;
         } catch (Exception e) {
             log.error("Failed to make payment for {}: {}", order.getUsername(), e.getMessage());
             throw new RuntimeException("Failed to call billing-service: " + e.getMessage(), e);
