@@ -3,7 +3,7 @@ spring:
     name: order
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/${DB_NAME:test_db}
+    url: jdbc:postgresql://localhost:5440/${DB_NAME:test_db}
     username: ${DB_USERNAME:test_user}
     password: ${DB_PASSWORD:test_password}
     driver-class-name: org.postgresql.Driver
@@ -24,15 +24,17 @@ spring:
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    liquibase-schema: public
+    default-schema: order_db
     enabled: true
 
   kafka:
     bootstrap-servers: localhost:9092
 
-    properties:
-      security.protocol: SASL_PLAINTEXT
-      sasl.mechanism: PLAIN
-      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
+#    properties:
+#      security.protocol: SASL_PLAINTEXT
+#      sasl.mechanism: PLAIN
+#      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

@@ -22,8 +22,8 @@ public class OrderDto {
     LocalDateTime createdAt;
     @NotNull
     Long shopId;
-    @NotNull
-    OrderStatus status;
+//    @NotNull
+//    OrderStatus status;
     Long deliveryId;
     @NotNull
     List<OrderPositionDto> orderPositions;

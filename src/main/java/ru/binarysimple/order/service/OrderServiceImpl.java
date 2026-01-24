@@ -67,13 +67,15 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResultDto create(OrderDto dto) {
         Order order = orderMapper.toEntity(dto);
-        
+
+        order.setStatus(OrderStatus.NEW);
 
         // Устанавливаем связь между заказом и позициями
         order.getOrderPositions().forEach(position -> position.setOrder(order));
 
         try {
             OperationDto operation = billingServiceClient.makePayment(order);
+            order.setStatus(OrderStatus.PAID);
         } catch (BillingServiceException billingServiceException){
             order.setStatus(OrderStatus.INSUFFICIENT_FUNDS);
         } catch (Exception e) {

@@ -10,6 +10,7 @@ public enum OrderStatus {
     INSUFFICIENT_FUNDS("Insufficient funds"),
     FAILED("Failed"),
     IN_PROGRESS("In progress"),
+    PAID("Paid"),
     DONE("Done"),
     CANCELED("Canceled");
 
