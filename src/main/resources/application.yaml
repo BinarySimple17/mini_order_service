@@ -16,6 +16,7 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
+        default_schema: order_db
         format_sql: true
         jdbc:
           lob:
