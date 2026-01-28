@@ -64,7 +64,10 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
     }
 
+    // Этот метод оставлен для обратной совместимости
+    // В новом коде следует использовать OrderSagaManager для создания заказов
     @Override
+    @Deprecated
     public OrderResultDto create(OrderDto dto) {
         Order order = orderMapper.toEntity(dto);
 

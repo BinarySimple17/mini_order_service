@@ -3,7 +3,11 @@ package ru.binarysimple.order.model;
 public enum OperationType {
     WITHDRAW("Withdrawal"),
     PAYMENT("Payment"),
-    DEPOSIT("Deposit");
+    DEPOSIT("Deposit"),
+    RESERVE("Reserve"),
+    CONFIRM("Confirm"),
+    CANCEL_RESERVATION("Cancel Reservation"),
+    REFUND("Refund");
 
     private final String typeName;
 

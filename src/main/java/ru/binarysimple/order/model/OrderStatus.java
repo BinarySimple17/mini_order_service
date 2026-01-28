@@ -12,7 +12,8 @@ public enum OrderStatus {
     IN_PROGRESS("In progress"),
     PAID("Paid"),
     DONE("Done"),
-    CANCELED("Canceled");
+    CANCELED("Canceled"),
+    RESERVING_PAYMENT("Reserving payment");
 
     private final String title;
 
