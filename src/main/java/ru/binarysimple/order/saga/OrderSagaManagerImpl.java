@@ -5,12 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import ru.binarysimple.order.client.BillingServiceClient;
+import ru.binarysimple.order.client.DeliveryServiceClient;
+import ru.binarysimple.order.client.WarehouseServiceClient;
 import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
 import ru.binarysimple.order.mapper.OrderMapper;
-import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.repository.OrderRepository;
+import ru.binarysimple.order.saga.steps.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -20,104 +25,78 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final BillingServiceClient billingServiceClient;
+    private final DeliveryServiceClient deliveryServiceClient;
+    private final WarehouseServiceClient warehouseServiceClient;
+
+    private final List<SagaStep> sagaSteps = new ArrayList<>();
+
+    @Override
+    public void addStep(SagaStep step) {
+        sagaSteps.add(step);
+    }
+
+    @Override
+    public void execute() {
+        Stack<SagaStep> executedSteps = new Stack<>();
+        try {
+            for (SagaStep step : sagaSteps) {
+                step.perform();
+                executedSteps.push(step);
+            }
+        } catch (Exception e) {
+            log.error("Saga execution failed, starting compensation", e);
+            while (!executedSteps.isEmpty()) {
+                SagaStep step = executedSteps.pop();
+                try {
+                    step.compensate();
+                } catch (Exception compensateException) {
+                    log.error("Compensation failed for step: {}", step.getClass().getSimpleName(), compensateException);
+                    // Continue compensating other steps
+                }
+            }
+            // Re-throw original exception after compensation
+            throw new RuntimeException("Saga execution failed: " + e.getMessage(), e);
+        } finally {
+            sagaSteps.clear();
+        }
+    }
 
     @Override
     @Transactional
     public OrderResultDto createOrder(OrderDto orderDto) {
-        Order order = orderMapper.toEntity(orderDto);
-        order.setStatus(OrderStatus.NEW);
-
-        // Сохраняем заказ в статусе NEW
-        Order savedOrder = orderRepository.save(order);
-
+        log.info("Starting order creation saga for order");
+        
         try {
-            // Шаг 1: Резервирование средств
-            billingServiceClient.reserveFunds(savedOrder);
-            savedOrder.setStatus(OrderStatus.RESERVING_PAYMENT);
-            savedOrder = orderRepository.save(savedOrder);
-
-            // Шаг 2: Подтверждение платежа
-            billingServiceClient.confirmPayment(savedOrder);
-            savedOrder.setStatus(OrderStatus.PAID);
-            savedOrder = orderRepository.save(savedOrder);
-
-            // Шаг 3: Создание задания на доставку
-            // deliveryServiceClient.createDelivery(savedOrder);
-            // savedOrder.setStatus(OrderStatus.IN_PROGRESS);
-            // savedOrder = orderRepository.save(savedOrder);
-
-            log.info("Order saga completed successfully for order {}", savedOrder.getId());
-            return orderMapper.toOrderResultDto(savedOrder);
-
+            // Создаем шаги саги
+            CreateOrderStep createOrderStep = new CreateOrderStep(orderDto, orderRepository, orderMapper);
+            addStep(createOrderStep);
+            
+            addStep(new MakePaymentStep(createOrderStep.getSavedOrder(), billingServiceClient, orderRepository));
+            
+            addStep(new ReserveProductWarehouseStep(createOrderStep.getSavedOrder(), warehouseServiceClient, orderRepository));
+            
+             addStep(new CreateDeliveryStep(createOrderStep.getSavedOrder(), deliveryServiceClient, orderRepository));
+            
+            // Выполняем сагу
+            execute();
+            
+            log.info("Order saga completed successfully");
+            return orderMapper.toOrderResultDto(createOrderStep.getSavedOrder());
+            
         } catch (Exception e) {
-            log.error("Order saga failed for order {}: {}", savedOrder.getId(), e.getMessage(), e);
-            // Запускаем компенсирующие действия
-            compensateOrderSaga(savedOrder.getId());
+            log.error("Order saga failed: {}", e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
-    @Transactional
     public void cancelOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
-
-        if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.RESERVING_PAYMENT) {
-            try {
-                // Компенсирующее действие: возврат средств
-                billingServiceClient.refundPayment(order);
-                order.setStatus(OrderStatus.CANCELED);
-                orderRepository.save(order);
-                log.info("Order canceled and payment refunded for order {}", orderId);
-            } catch (Exception e) {
-                log.error("Failed to cancel order {}: {}", orderId, e.getMessage(), e);
-                // Можно добавить повторные попытки или отправить в очередь для повторной обработки
-                throw new RuntimeException("Failed to cancel order: " + e.getMessage(), e);
-            }
-        } else {
-            order.setStatus(OrderStatus.CANCELED);
-            orderRepository.save(order);
-            log.info("Order canceled without payment actions for order {}", orderId);
-        }
+        log.info("Not yet implemented: cancelOrder step");
     }
 
-    @Transactional
-    protected void compensateOrderSaga(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
-
-        log.info("Starting compensation for order {} with status {}", orderId, order.getStatus());
-
-        try {
-            // В зависимости от текущего состояния выполняем соответствующие компенсирующие действия
-            switch (order.getStatus()) {
-                case RESERVING_PAYMENT -> {
-                    // Отмена резервирования средств
-                    billingServiceClient.cancelReservation(order);
-                    order.setStatus(OrderStatus.CANCELED);
-                    orderRepository.save(order);
-                    log.info("Compensation: Reservation canceled for order {}", orderId);
-                }
-                case PAID -> {
-                    // Возврат средств
-                    billingServiceClient.refundPayment(order);
-                    order.setStatus(OrderStatus.CANCELED);
-                    orderRepository.save(order);
-                    log.info("Compensation: Payment refunded for order {}", orderId);
-                }
-                case NEW -> {
-                    // Просто отменяем заказ
-                    order.setStatus(OrderStatus.CANCELED);
-                    orderRepository.save(order);
-                    log.info("Compensation: Order canceled for order {}", orderId);
-                }
-                default -> log.info("No compensation needed for order {} with status {}", orderId, order.getStatus());
-            }
-        } catch (Exception e) {
-            log.error("Failed to compensate order {}: {}", orderId, e.getMessage(), e);
-            // Можно добавить повторные попытки или отправить в очередь для повторной обработки
-            throw new RuntimeException("Failed to compensate order: " + e.getMessage(), e);
-        }
-    }
+    // Метод cancelOrder больше не нужен, так как отмена обрабатывается через компенсирующие шаги
+    // При сбое в любом шаге саги автоматически запускаются соответствующие компенсирующие действия
+    // через механизм execute() и стек выполненных шагов.
+    // Все компенсирующие действия теперь обрабатываются на уровне отдельных шагов саги
+    // через метод compensate() каждого SagaStep
 }
