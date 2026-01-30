@@ -29,9 +29,9 @@ public class ReserveStockStep implements SagaStep<ReserveStockCommand, StockRese
         pendingRequests.put(command.getOrder().getId(), future);
 
         // Отправка команды в Kafka
-        kafkaTemplate.send("warehouse.commands", command);
-
         try {
+            kafkaTemplate.send("warehouse.commands", command);
+
             // Ждем результат из Kafka (с таймаутом)
             StockReservedEvent reservedEvent = future.get(30, TimeUnit.SECONDS); // Таймаут!
             if ("RESERVED".equals(reservedEvent.getStatus())) {
@@ -44,6 +44,8 @@ public class ReserveStockStep implements SagaStep<ReserveStockCommand, StockRese
         } catch (InterruptedException | ExecutionException e) {
             Thread.currentThread().interrupt(); // Восстанавливаем статус прерывания
             return StepExecutionResult.failure("Error waiting for stock reservation response: " + e.getCause().getMessage()); // getCause() для получения реальной ошибки
+        } catch (Exception ex) {
+            return StepExecutionResult.failure("Error when sending Kafka message: " + ex.getCause().getMessage()); // getCause() для получения реальной ошибки
         } finally {
             pendingRequests.remove(command.getOrder().getId()); // Убираем из мапы
         }

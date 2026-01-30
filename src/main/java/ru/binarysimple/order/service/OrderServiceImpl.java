@@ -66,14 +66,14 @@ public class OrderServiceImpl implements OrderService {
 
     // Этот метод оставлен для обратной совместимости
     // В новом коде следует использовать OrderSagaManager для создания заказов
-    @Override
     @Deprecated
-    public OrderResultDto create(OrderDto dto) {
+    public OrderResultDto create_deprecated(OrderDto dto) {
         Order order = orderMapper.toEntity(dto);
 
         order.setStatus(OrderStatus.NEW);
 
         // Устанавливаем связь между заказом и позициями
+//        order.getOrderPositions().forEach(position -> position.setOrderId(order.getId()));
         order.getOrderPositions().forEach(position -> position.setOrder(order));
 
         try {
@@ -92,6 +92,21 @@ public class OrderServiceImpl implements OrderService {
         // в этом событии топравка сообщения в кафку
         // только для transactional
         eventPublisher.publishEvent(new OrderCreatedEvent(resultOrder, Class.class.getName()));
+
+        return orderMapper.toOrderResultDto(resultOrder);
+    }
+
+    @Override
+    public OrderResultDto create(OrderDto dto) {
+        Order order = orderMapper.toEntity(dto);
+
+        order.setStatus(OrderStatus.NEW);
+
+        // Устанавливаем связь между заказом и позициями
+//        order.getOrderPositions().forEach(position -> position.setOrderId(order.getId()));
+        order.getOrderPositions().forEach(position -> position.setOrder(order));
+
+        Order resultOrder = orderRepository.save(order);
 
         return orderMapper.toOrderResultDto(resultOrder);
     }

@@ -6,6 +6,8 @@ import ru.binarysimple.order.client.BillingServiceClient;
 import ru.binarysimple.order.dto.OperationDto;
 import ru.binarysimple.order.dto.commands.PaymentProcessedEvent;
 import ru.binarysimple.order.dto.commands.MakePaymentCommand;
+import ru.binarysimple.order.exception.BillingServiceException;
+import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.saga.SagaStep;
 import ru.binarysimple.order.saga.StepExecutionResult;
 
@@ -28,6 +30,8 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
 // //                    return StepExecutionResult.failure("Payment reservation failed with status: " + response.getStatus());
 //                }
 //            }
+        } catch (BillingServiceException billingServiceException) {
+            return StepExecutionResult.failure(OrderStatus.INSUFFICIENT_FUNDS.name());
         } catch (Exception e) {
             return StepExecutionResult.failure("Exception during payment reservation: " + e.getMessage());
         }

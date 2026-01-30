@@ -23,7 +23,7 @@ public class BillingServiceClient {
     @Autowired
     public BillingServiceClient(@Value("${endpoints.billing-service:http://test-name:8081}") String baseUrl) {
 
-        log.info("UsersServiceClient baseUrl: {}", baseUrl);
+        log.info("BillingServiceClient baseUrl: {}", baseUrl);
         this.baseUrl = baseUrl;
 
         this.restClient = RestClient.builder()

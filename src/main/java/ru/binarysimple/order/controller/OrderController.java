@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
-import ru.binarysimple.order.saga.DEP_OrderSagaManager;
+import ru.binarysimple.order.saga.OrderSagaOrchestrator;
 import ru.binarysimple.order.service.OrderService;
 
 @RestController
@@ -16,14 +16,13 @@ import ru.binarysimple.order.service.OrderService;
 public class OrderController {
 
     private final OrderService orderService;
-    private final DEP_OrderSagaManager orderSagaManager;
+    private final OrderSagaOrchestrator orderSagaOrchestrator;
 //    private final OrderSagaManager orderSagaManager;
 
 //    public OrderController(OrderService orderService, OrderSagaManager orderSagaManager) {
 //        this.orderService = orderService;
 //        this.orderSagaManager = orderSagaManager;
 //    }
-
 
 
     @GetMapping("/{id}")
@@ -36,14 +35,17 @@ public class OrderController {
         if (!currentUsername.equals(dto.getUsername())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
-        return orderSagaManager.createOrder(dto);
+
+        var orderDto = orderService.create(dto);
+
+        return orderSagaOrchestrator.startOrderSaga(orderDto.getId());
     }
 
-    @DeleteMapping("/{id}")
-    public OrderResultDto cancelOrder(@PathVariable Long id) {
-        orderSagaManager.cancelOrder(id);
-        return orderService.getOne(id);
-    }
+//    @DeleteMapping("/{id}")
+//    public OrderResultDto cancelOrder(@PathVariable Long id) {
+////        orderSagaOrchestrator.cancelOrder(id);
+//        return orderService.getOne(id);
+//    }
 
 //    @GetMapping
 //    public PagedModel<OrderDto> getAll(@ParameterObject Pageable pageable) {

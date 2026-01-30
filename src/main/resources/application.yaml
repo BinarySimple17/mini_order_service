@@ -4,7 +4,7 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5440/${DB_NAME:test_db}
-    username: ${DB_USERNAME:test_user}
+    username: ${DB_USERNAME:db_user}
     password: ${DB_PASSWORD:test_password}
     driver-class-name: org.postgresql.Driver
     hikari:
@@ -36,6 +36,10 @@ spring:
 #      security.protocol: SASL_PLAINTEXT
 #      sasl.mechanism: PLAIN
 #      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
+    consumer:
+      group-id: order-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

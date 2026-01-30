@@ -9,7 +9,7 @@ import org.springframework.web.client.RestClient;
 import ru.binarysimple.order.dto.DeliveryIDDto;
 import ru.binarysimple.order.dto.ProductIDDto;
 
-@Component
+//@Component
 @Slf4j
 public class DeliveryServiceClient {
 
@@ -20,7 +20,7 @@ public class DeliveryServiceClient {
     @Autowired
     public DeliveryServiceClient(@Value("${endpoints.delivery-service:http://test-name:8081}") String baseUrl) {
 
-        log.info("WarehouseServiceClient baseUrl: {}", baseUrl);
+        log.info("DeliveryServiceClient baseUrl: {}", baseUrl);
         this.baseUrl = baseUrl;
 
         this.restClient = RestClient.builder()

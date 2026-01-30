@@ -12,7 +12,7 @@ import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.model.OperationType;
 import ru.binarysimple.order.model.Order;
 
-@Component
+//@Component
 @Slf4j
 public class WarehouseServiceClient {
 

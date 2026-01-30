@@ -21,4 +21,9 @@ public class OrderSaga {
     private String currentStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
     private String status;      // e.g., "PROCESSING", "COMPENSATING", "COMPLETED", "FAILED"
     private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

@@ -1,9 +1,6 @@
 package ru.binarysimple.order.model;
 
-import lombok.Getter;
-import lombok.ToString;
-
-@Getter
+//@Getter
 public enum OrderStatus {
     NEW("New"),
     PENDING_PAYMENT("Pending Payment"), // После успешного вызова Billing

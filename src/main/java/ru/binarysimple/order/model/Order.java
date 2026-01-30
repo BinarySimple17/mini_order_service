@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import ru.binarysimple.order.dto.OrderPositionDto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,7 +28,6 @@ public class Order {
     private String username;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-//    @OrderBy
     private List<OrderPosition> orderPositions = new ArrayList<>();
 
     @Column(name = "total_cost", precision = 19, scale = 2, nullable = false)
