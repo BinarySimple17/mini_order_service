@@ -37,7 +37,8 @@ public class BillingServiceClient {
         OperationRequest operationRequest = new OperationRequest(
                 operationType,
                 order.getTotalCost(),
-                new AccountOperationDto(order.getUsername()));
+                new AccountOperationDto(order.getUsername()),
+                order.getId());
 
         try {
             OperationDto operation = restClient

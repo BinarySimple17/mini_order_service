@@ -12,4 +12,5 @@ public class OperationRequest {
     BigDecimal amount;
     @NotNull
     AccountOperationDto account;
+    Long orderId;
 }

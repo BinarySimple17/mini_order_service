@@ -36,9 +36,9 @@ public class OrderController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
-        var orderDto = orderService.create(dto);
+        return orderService.create(dto);
 
-        return orderSagaOrchestrator.startOrderSaga(orderDto.getId());
+//        return orderSagaOrchestrator.startOrderSaga(orderDto.getId());
     }
 
 //    @DeleteMapping("/{id}")
