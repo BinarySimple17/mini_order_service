@@ -121,7 +121,8 @@ public class OrderServiceImpl implements OrderService {
         sagaRepository.save(saga);
 
         // Публикуем событие в Kafka
-        OrderCreatedEvent event = new OrderCreatedEvent(orderMapper.toOrderResultDto(resultOrder), this.getClass().getName(), saga.getId());
+        OrderCreatedEvent event = OrderCreatedEvent.create(orderMapper.toOrderResultDto(resultOrder), this.getClass().getName(), saga.getId());
+//        OrderCreatedEvent event = new OrderCreatedEvent(orderMapper.toOrderResultDto(resultOrder), this.getClass().getName(), saga.getId());
         kafkaTemplate.send("order.saga.events", "order_created" + resultOrder.getId(), event);
 
         return orderMapper.toOrderResultDto(resultOrder);

@@ -1,5 +1,7 @@
 package ru.binarysimple.order.dto;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.Value;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderStatus;
@@ -11,14 +13,15 @@ import java.util.List;
 /**
  * DTO for {@link Order}
  */
-@Value
+@Data
+@NoArgsConstructor
 public class OrderResultDto {
-    Long id;
-    String username;
-    List<OrderPositionDto> orderPositions;
-    BigDecimal totalCost;
-    LocalDateTime createdAt;
-    Long shopId;
-    OrderStatus status;
-    Long deliveryId;
+    private Long id;
+    private String username;
+    private List<OrderPositionDto> orderPositions;
+    private BigDecimal totalCost;
+    private LocalDateTime createdAt;
+    private Long shopId;
+    private OrderStatus status;
+    private Long deliveryId;
 }

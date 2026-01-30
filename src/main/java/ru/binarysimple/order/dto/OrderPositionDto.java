@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 @Setter
 @Getter
 @AllArgsConstructor
+@NoArgsConstructor
 public class OrderPositionDto {
     @NotNull
     Long productId;

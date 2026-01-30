@@ -6,7 +6,6 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.binarysimple.order.dto.OrderResultDto;
 import ru.binarysimple.order.dto.commands.MakePaymentCommand;
 import ru.binarysimple.order.dto.commands.PaymentProcessedEvent;
 import ru.binarysimple.order.dto.commands.ReserveStockCommand;
@@ -18,9 +17,6 @@ import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.events.OrderCreatedEvent;
-import ru.binarysimple.order.saga.events.OrderPaidEvent;
-import ru.binarysimple.order.saga.events.OrderStockReservedEvent;
-import ru.binarysimple.order.saga.events.OrderStockReservedFailedEvent;
 import ru.binarysimple.order.saga.steps.MakePaymentStep;
 import ru.binarysimple.order.saga.steps.ReserveStockStep;
 
@@ -75,17 +71,18 @@ public class OrderSagaOrchestrator {
         order.setStatus(OrderStatus.PENDING_PAYMENT);
         orderRepository.save(order);
 
-        // Публикуем событие в Kafka
-        OrderCreatedEvent nextEvent = new OrderCreatedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
-        kafkaTemplate.send("order.saga.events", "order_paid" + order.getId(), nextEvent);
-    }
+//        // Публикуем событие в Kafka
+//        OrderCreatedEvent nextEvent = OrderCreatedEvent.create(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
+////        OrderCreatedEvent nextEvent = new OrderCreatedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
+//        kafkaTemplate.send("order.saga.events", "order_paid" + order.getId(), nextEvent);
+//    }
+//
+//    @KafkaListener(topics = "order.saga.events.paid", groupId = "order-service-group")
+//    public void handleOrderPaidEvent(OrderPaidEvent event) {
 
-    @KafkaListener(topics = "order.saga.events", groupId = "order-service-group")
-    public void handleOrderPaidEvent(OrderPaidEvent event) {
-
-        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
-
-        Order order = getOrder(event.getOrder().getId());
+//        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
+//
+//        Order order = getOrder(event.getOrder().getId());
 
         // Переходим к следующему шагу
         saga.setCurrentStep("WAREHOUSE");
@@ -104,9 +101,10 @@ public class OrderSagaOrchestrator {
             sagaRepository.save(saga);
 
             // Компенсируем предыдущий шаг (отмена оплаты)
-            // Публикуем событие в Kafka
-            OrderStockReservedFailedEvent nextEvent = new OrderStockReservedFailedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
-            kafkaTemplate.send("order.saga.events", "order_stock_failed" + order.getId(), nextEvent);
+            compensateStep(makePaymentStep, paymentCmd);
+//            // Публикуем событие в Kafka
+//            OrderStockReservedFailedEvent nextEvent = new OrderStockReservedFailedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
+//            kafkaTemplate.send("order.saga.events", "order_stock_failed" + order.getId(), nextEvent);
             return;
         }
 
@@ -114,40 +112,40 @@ public class OrderSagaOrchestrator {
         order.setStatus(OrderStatus.PENDING_RESERVATION);
         orderRepository.save(order);
 
-        // Публикуем событие в Kafka
-        OrderStockReservedEvent nextEvent = new OrderStockReservedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
-        kafkaTemplate.send("order.saga.events", "order_stock_reserved" + order.getId(), nextEvent);
+//        // Публикуем событие в Kafka
+//        OrderStockReservedEvent nextEvent = new OrderStockReservedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
+//        kafkaTemplate.send("order.saga.events", "order_stock_reserved" + order.getId(), nextEvent);
+//
+//    }
 
-    }
+//    @KafkaListener(topics = "order.saga.events.3", groupId = "order-service-group")
+//    public void handleOrderStockReservedFailedEvent(OrderStockReservedFailedEvent event) {
+//
+//        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
+//
+//        Order order = getOrder(event.getOrder().getId());
+//
+//        // Компенсируем оплату
+//        MakePaymentCommand paymentCmd = new MakePaymentCommand(order);
+//        compensateStep(makePaymentStep, paymentCmd);
+////        StepExecutionResult<PaymentProcessedEvent> paymentResult = makePaymentStep.compensate(paymentCmd);
+//
+//        // Завершаем Saga
+////        order.setStatus(PAYMENT_FAILED);
+////        orderRepository.save(order);
+//
+//        saga.setStatus("FAILED");
+//        sagaRepository.save(saga);
+//
+//        log.info("Saga completed bad scenario for Order {}", order.getId());
+//    }
 
-    @KafkaListener(topics = "order.saga.events", groupId = "order-service-group")
-    public void handleOrderStockReservedFailedEvent(OrderStockReservedFailedEvent event) {
-
-        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
-
-        Order order = getOrder(event.getOrder().getId());
-
-        // Компенсируем оплату
-        MakePaymentCommand paymentCmd = new MakePaymentCommand(order);
-        compensateStep(makePaymentStep, paymentCmd);
-//        StepExecutionResult<PaymentProcessedEvent> paymentResult = makePaymentStep.compensate(paymentCmd);
-
-        // Завершаем Saga
-//        order.setStatus(PAYMENT_FAILED);
-//        orderRepository.save(order);
-
-        saga.setStatus("FAILED");
-        sagaRepository.save(saga);
-
-        log.info("Saga completed bad scenario for Order {}", order.getId());
-    }
-
-    @KafkaListener(topics = "order.saga.events", groupId = "order-service-group")
-    public void handleOrderStockReservedEvent(OrderStockReservedEvent event) {
-
-        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
-
-        Order order = getOrder(event.getOrder().getId());
+//    @KafkaListener(topics = "order.saga.events.4", groupId = "order-service-group")
+//    public void handleOrderStockReservedEvent(OrderStockReservedEvent event) {
+//
+//        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
+//
+//        Order order = getOrder(event.getOrder().getId());
 
         // Переходим к следующему шагу
         saga.setCurrentStep("DELIVERY");

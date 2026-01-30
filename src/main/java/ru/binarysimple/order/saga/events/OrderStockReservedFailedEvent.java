@@ -1,21 +1,19 @@
 package ru.binarysimple.order.saga.events;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import ru.binarysimple.order.dto.OrderResultDto;
 
 import java.util.UUID;
 
 @Getter
-public class OrderStockReservedFailedEvent extends OrderCommonEvent {
-    public OrderStockReservedFailedEvent(OrderResultDto order, String source, UUID sagaId) {
-        super(order, source, sagaId);
-    }
+@Setter
+@RequiredArgsConstructor
+public class OrderStockReservedFailedEvent {
+    private final OrderResultDto order;
+    private final String source;
+    private final UUID sagaId;
+    private final String eventId = UUID.randomUUID().toString(); // Уникальный ID события
+    private final long timestamp = System.currentTimeMillis();
 }
-//@RequiredArgsConstructor
-//public class OrderPaidCompensateEvent {
-//    private final OrderResultDto order;
-//    private final String source;
-//    private final UUID sagaId;
-//    private final String eventId = UUID.randomUUID().toString(); // Уникальный ID события
-//    private final long timestamp = System.currentTimeMillis();
-//}

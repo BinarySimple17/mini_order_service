@@ -40,8 +40,8 @@ spring:
       group-id: order-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-#      properties:
-#        spring.json.trusted.packages: ru.binarysimple.order.saga.events,ru.binarysimple.order.dto
+      properties:
+        spring.json.trusted.packages: ru.binarysimple.order.saga.events,ru.binarysimple.order.dto
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
