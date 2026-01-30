@@ -7,6 +7,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 import ru.binarysimple.order.client.UserServiceClient;
+import ru.binarysimple.order.dto.OrderResultDto;
 import ru.binarysimple.order.kafka.OrderEvent;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.NotificationContact;
@@ -31,7 +32,7 @@ public class NotificationServiceImpl implements NotificationService {
     private String orderTopic;
 
     @Override
-    public void sendNotification(Order order) {
+    public void sendNotification(OrderResultDto order) {
 
         if (order == null) return;
 
@@ -49,7 +50,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private void sendEvent(Order order, NotificationContact contact) {
+    private void sendEvent(OrderResultDto order, NotificationContact contact) {
 
         OrderEvent event = mapper.toOrderEvent(order);
         event.setContact(contact);

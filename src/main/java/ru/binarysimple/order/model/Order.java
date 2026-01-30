@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import ru.binarysimple.order.dto.OrderPositionDto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,6 +33,7 @@ public class Order {
     private BigDecimal totalCost;
 
     @Column(name = "created_at")
+//    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
     @Column(name = "shop_id", nullable = false)

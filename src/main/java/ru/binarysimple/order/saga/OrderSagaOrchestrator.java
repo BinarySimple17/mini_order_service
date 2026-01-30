@@ -2,6 +2,8 @@ package ru.binarysimple.order.saga;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.binarysimple.order.dto.OrderResultDto;
@@ -15,8 +17,14 @@ import ru.binarysimple.order.model.OrderSaga;
 import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
+import ru.binarysimple.order.saga.events.OrderCreatedEvent;
+import ru.binarysimple.order.saga.events.OrderPaidEvent;
+import ru.binarysimple.order.saga.events.OrderStockReservedEvent;
+import ru.binarysimple.order.saga.events.OrderStockReservedFailedEvent;
 import ru.binarysimple.order.saga.steps.MakePaymentStep;
 import ru.binarysimple.order.saga.steps.ReserveStockStep;
+
+import java.util.UUID;
 
 import static ru.binarysimple.order.model.OrderStatus.PAYMENT_FAILED;
 
@@ -28,28 +36,27 @@ public class OrderSagaOrchestrator {
 
     private final OrderMapper orderMapper;
     private final OrderRepository orderRepository;
-    private final MakePaymentStep makePaymentStep; // Внедряем шаги
+    private final MakePaymentStep makePaymentStep;
     private final ReserveStockStep reserveStockStep;
     private final OrderSagaRepository sagaRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-//    private InitiateDeliveryStep initiateDeliveryStep;
+    @KafkaListener(topics = "order.saga.events", groupId = "order-service-group")
+    public void handleOrderCreatedEvent(OrderCreatedEvent event) {
+        log.info("Received OrderCreatedEvent for Order {}", event.getOrder().getId());
 
-    public OrderResultDto startOrderSaga(Long orderId) {
+        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
 
-        log.info("Starting Saga for Order {}", orderId);
-
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
-
-        // --- Выполняем шаги ---
-        OrderSaga saga = new OrderSaga();
-        saga.setOrderId(order.getId());
         saga.setCurrentStep("BILLING");
         saga.setStatus("PROCESSING");
         sagaRepository.save(saga);
 
-        MakePaymentCommand paymentCmd = new MakePaymentCommand(order);
+        Order order = getOrder(event.getOrder().getId());
 
+        // Первый шаг: оплата
+        MakePaymentCommand paymentCmd = new MakePaymentCommand(order);
         StepExecutionResult<PaymentProcessedEvent> paymentResult = makePaymentStep.execute(paymentCmd);
+
         if (!paymentResult.isSuccess()) {
             log.error("Payment step failed for Order {}: {}", order.getId(), paymentResult.getFailureReason());
             try {
@@ -58,57 +65,118 @@ public class OrderSagaOrchestrator {
                 order.setStatus(PAYMENT_FAILED);
             }
             orderRepository.save(order);
-            // Saga завершена с ошибкой на первом шаге, компенсация не нужна.
+
             saga.setStatus("FAILED");
             sagaRepository.save(saga);
-            return orderMapper.toOrderResultDto(order);
+            return;
         }
 
-        order.setStatus(OrderStatus.PAID);
+        // Оплата успешна
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
         orderRepository.save(order);
+
+        // Публикуем событие в Kafka
+        OrderCreatedEvent nextEvent = new OrderCreatedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
+        kafkaTemplate.send("order.saga.events", "order_paid" + order.getId(), nextEvent);
+    }
+
+    @KafkaListener(topics = "order.saga.events", groupId = "order-service-group")
+    public void handleOrderPaidEvent(OrderPaidEvent event) {
+
+        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
+
+        Order order = getOrder(event.getOrder().getId());
+
+        // Переходим к следующему шагу
         saga.setCurrentStep("WAREHOUSE");
         sagaRepository.save(saga);
 
+        // Второй шаг: резервирование товаров
         ReserveStockCommand stockCmd = new ReserveStockCommand(orderMapper.toOrderResultDto(order));
         StepExecutionResult<StockReservedEvent> stockResult = reserveStockStep.execute(stockCmd);
+
         if (!stockResult.isSuccess()) {
             log.error("Stock reservation step failed for Order {}: {}", order.getId(), stockResult.getFailureReason());
             order.setStatus(OrderStatus.RESERVATION_FAILED);
             orderRepository.save(order);
+
             saga.setStatus("COMPENSATING");
             sagaRepository.save(saga);
-            // Нужно компенсировать предыдущий шаг (оплату)
-            compensateStep(makePaymentStep, paymentCmd);
-            saga.setStatus("FAILED");
-            sagaRepository.save(saga);
-            return orderMapper.toOrderResultDto(order);
+
+            // Компенсируем предыдущий шаг (отмена оплаты)
+            // Публикуем событие в Kafka
+            OrderStockReservedFailedEvent nextEvent = new OrderStockReservedFailedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
+            kafkaTemplate.send("order.saga.events", "order_stock_failed" + order.getId(), nextEvent);
+            return;
         }
 
+        // Резервирование успешно
         order.setStatus(OrderStatus.PENDING_RESERVATION);
         orderRepository.save(order);
+
+        // Публикуем событие в Kafka
+        OrderStockReservedEvent nextEvent = new OrderStockReservedEvent(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
+        kafkaTemplate.send("order.saga.events", "order_stock_reserved" + order.getId(), nextEvent);
+
+    }
+
+    @KafkaListener(topics = "order.saga.events", groupId = "order-service-group")
+    public void handleOrderStockReservedFailedEvent(OrderStockReservedFailedEvent event) {
+
+        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
+
+        Order order = getOrder(event.getOrder().getId());
+
+        // Компенсируем оплату
+        MakePaymentCommand paymentCmd = new MakePaymentCommand(order);
+        compensateStep(makePaymentStep, paymentCmd);
+//        StepExecutionResult<PaymentProcessedEvent> paymentResult = makePaymentStep.compensate(paymentCmd);
+
+        // Завершаем Saga
+//        order.setStatus(PAYMENT_FAILED);
+//        orderRepository.save(order);
+
+        saga.setStatus("FAILED");
+        sagaRepository.save(saga);
+
+        log.info("Saga completed bad scenario for Order {}", order.getId());
+    }
+
+    @KafkaListener(topics = "order.saga.events", groupId = "order-service-group")
+    public void handleOrderStockReservedEvent(OrderStockReservedEvent event) {
+
+        OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
+
+        Order order = getOrder(event.getOrder().getId());
+
+        // Переходим к следующему шагу
         saga.setCurrentStep("DELIVERY");
         sagaRepository.save(saga);
 
-//        InitiateDeliveryCommand deliveryCmd = new InitiateDeliveryCommand(orderId);
-//        StepExecutionResult<DeliveryInitiatedEvent> deliveryResult = initiateDeliveryStep.execute(deliveryCmd);
-//        if (!deliveryResult.isSuccess()) {
-//            log.error("Delivery initiation step failed for Order {}: {}", orderId, deliveryResult.getFailureReason());
-//            order.setStatus(OrderStatus.DELIVERY_FAILED);
-//            orderRepository.save(order);
-//            saga.setStatus("COMPENSATING");
-//            // Нужно компенсировать предыдущие шаги
-//            compensateStep(reserveStockStep, stockCmd);
-//            compensateStep(makePaymentStep, paymentCmd);
-//            saga.setStatus("FAILED");
-//            return;
-//        }
-
+        // Завершаем Saga
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
+
         saga.setStatus("COMPLETED");
         sagaRepository.save(saga);
+
         log.info("Saga completed successfully for Order {}", order.getId());
-        return orderMapper.toOrderResultDto(order);
+    }
+
+    private OrderSaga getSaga(UUID id, Long orderId) {
+        // находим OrderSaga для отслеживания состояния
+        OrderSaga saga = sagaRepository.findById(id).orElseGet(() -> {
+            log.warn("OrderSaga not found for ID: {}. Initializing new saga state.", id);
+            OrderSaga newSaga = new OrderSaga();
+            newSaga.setId(id);
+            newSaga.setOrderId(orderId);
+            return newSaga;
+        });
+        return saga;
+    }
+
+    private Order getOrder(Long orderId) {
+        return orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
     }
 
     private <C> void compensateStep(SagaStep<C, ?> step, C command) {
@@ -117,7 +185,6 @@ public class OrderSagaOrchestrator {
         if (compensationResult.isSuccess()) {
             log.info("Compensation successful for step: {}", step.getClass().getSimpleName());
         } else {
-            // обработка неудачной компенсации: алярм, повтор...
             log.error("Compensation failed for step {}: {}", step.getClass().getSimpleName(), compensationResult.getFailureReason());
         }
     }
