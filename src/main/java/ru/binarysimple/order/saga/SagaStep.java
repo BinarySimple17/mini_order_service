@@ -1,20 +1,21 @@
 package ru.binarysimple.order.saga;
 
-/**
- * Интерфейс для шага в паттерне Saga.
- * Каждый шаг должен реализовывать методы выполнения и компенсации.
- */
-public interface SagaStep {
-    
+//
+public interface SagaStep<Command, EventResult> {
     /**
-     * Выполняет основное действие шага.
-     * @throws Exception если выполнение шага завершилось с ошибкой
+     * Выполняет шаг Saga.
+     *
+     * @param command Команда для выполнения шага.
+     * @return Результат выполнения шага (успешно/неуспешно, событие и т.д.).
      */
-    void perform() throws Exception;
-    
+    StepExecutionResult<EventResult> execute(Command command);
+
     /**
-     * Выполняет компенсирующее действие шага.
-     * @throws Exception если компенсация шага завершилась с ошибкой
+     * Компенсирует действие этого шага.
+     *
+     * @param command Команда для компенсации (может быть та же, что и в execute, или специальная).
+     * @return Результат компенсации.
      */
-    void compensate() throws Exception;
+    StepExecutionResult<EventResult> compensate(Command command);
 }
+

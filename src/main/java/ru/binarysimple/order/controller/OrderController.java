@@ -7,9 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
-import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.saga.OrderSagaManager;
-import ru.binarysimple.order.service.NotificationService;
+import ru.binarysimple.order.saga.DEP_OrderSagaManager;
 import ru.binarysimple.order.service.OrderService;
 
 @RestController
@@ -18,7 +16,7 @@ import ru.binarysimple.order.service.OrderService;
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderSagaManager orderSagaManager;
+    private final DEP_OrderSagaManager orderSagaManager;
 //    private final OrderSagaManager orderSagaManager;
 
 //    public OrderController(OrderService orderService, OrderSagaManager orderSagaManager) {
