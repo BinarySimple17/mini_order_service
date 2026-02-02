@@ -19,6 +19,7 @@ public class OrderSaga {
 
     private Long orderId;
     private String currentStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
+    private String compensateStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
     private String status;      // e.g., "PROCESSING", "COMPENSATING", "COMPLETED", "FAILED"
     private LocalDateTime createdAt;
     @Column(name = "updated_at")

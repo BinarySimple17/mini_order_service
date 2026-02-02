@@ -31,7 +31,7 @@ public class BillingServiceClient {
                 .build();
     }
 
-    private OperationDto executeOperation(Order order, OperationType operationType, String operationName) {
+    private OperationDto executeOperation(OrderResultDto order, OperationType operationType, String operationName) {
         log.info("Initiating {} for order {}", operationName, order.getId());
 
         OperationRequest operationRequest = new OperationRequest(
@@ -65,11 +65,11 @@ public class BillingServiceClient {
         }
     }
 
-    public OperationDto makePayment(Order order) {
+    public OperationDto makePayment(OrderResultDto order) {
         return executeOperation(order, OperationType.PAYMENT, "payment");
     }
 
-    public OperationDto cancelPayment(Order order) {
+    public OperationDto cancelPayment(OrderResultDto order) {
         return executeOperation(order, OperationType.REFUND, "canceling payment");
     }
 

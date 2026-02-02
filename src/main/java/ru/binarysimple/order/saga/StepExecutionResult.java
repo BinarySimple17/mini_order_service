@@ -27,4 +27,8 @@ public class StepExecutionResult<T> {
     public static <T> StepExecutionResult<T> failure(String reason) {
         return new StepExecutionResult<>(false, reason, null);
     }
+
+    public static <T> StepExecutionResult<T> waiting() {
+        return new StepExecutionResult<>(true, null, null);
+    }
 }
