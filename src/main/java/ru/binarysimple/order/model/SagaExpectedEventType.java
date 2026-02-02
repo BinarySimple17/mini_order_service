@@ -1,0 +1,18 @@
+package ru.binarysimple.order.model;
+
+
+public enum SagaExpectedEventType {
+    STOCK_RESERVED_EVENT("StockReservedEvent"),
+    PAYMENT_PROCESSED_EVENT("PaymentProcessedEvent"), // Если когда-либо понадобится ожидать события от оплаты
+    DELIVERY_INITIATED_EVENT("DeliveryInitiatedEvent"); //
+
+    private final String eventName;
+
+    SagaExpectedEventType(String eventName) {
+        this.eventName = eventName;
+    }
+
+    public String getEventName() {
+        return eventName;
+    }
+}

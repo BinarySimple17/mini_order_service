@@ -9,9 +9,9 @@ import java.util.UUID;
 @Getter
 @RequiredArgsConstructor
 public class OrderStockReservedEvent {
-    private final OrderResultDto order;
+    private final Long orderId;
     private final String source;
     private final UUID sagaId;
-    private final String eventId = UUID.randomUUID().toString(); // Уникальный ID события
-    private final long timestamp = System.currentTimeMillis();
+    private final String eventId;
+    private final long timestamp;
 }

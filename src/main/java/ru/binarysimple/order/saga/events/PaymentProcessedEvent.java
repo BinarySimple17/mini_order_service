@@ -1,4 +1,4 @@
-package ru.binarysimple.order.dto.commands;
+package ru.binarysimple.order.saga.events;
 
 import lombok.Value;
 import ru.binarysimple.order.dto.OperationDto;

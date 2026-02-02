@@ -1,27 +1,37 @@
 package ru.binarysimple.order.saga.steps;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import ru.binarysimple.order.dto.commands.CancelStockReservationCommand;
 import ru.binarysimple.order.dto.commands.ReserveStockCommand;
-import ru.binarysimple.order.dto.commands.StockReservedEvent;
+import ru.binarysimple.order.saga.events.StockReservedEvent;
+import ru.binarysimple.order.mapper.OrderMapper;
+import ru.binarysimple.order.model.Order;
+import ru.binarysimple.order.model.OrderSaga;
+import ru.binarysimple.order.model.OrderStatus;
+import ru.binarysimple.order.repository.OrderRepository;
+import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.SagaStep;
 import ru.binarysimple.order.saga.StepExecutionResult;
+import ru.binarysimple.order.saga.events.OrderCreatedEvent;
 
 import java.util.Map;
 import java.util.concurrent.*;
 
 @Component
+@AllArgsConstructor
+@Slf4j
 public class ReserveStockStep implements SagaStep<ReserveStockCommand, StockReservedEvent> {
 
     private final Map<Long, CompletableFuture<StockReservedEvent>> pendingRequests = new ConcurrentHashMap<>();
-    @Autowired
+    private final OrderMapper orderMapper;
+    private final OrderRepository orderRepository;
+    private final OrderSagaRepository sagaRepository;
     private KafkaTemplate<String, Object> kafkaTemplate;
-    @Autowired
-    private ApplicationEventPublisher eventPublisher; // Для получения результата из Kafka
 
     @Override
     public StepExecutionResult<StockReservedEvent> execute(ReserveStockCommand command) {
@@ -52,12 +62,42 @@ public class ReserveStockStep implements SagaStep<ReserveStockCommand, StockRese
     }
 
     // Kafka Listener для получения ответа от склада
-    @KafkaListener(topics = "warehouse.responses")
-    public void handleStockReservationResponse(StockReservedEvent event) {
+    @KafkaListener(topics = "warehouse.responses", groupId = "order-group")
+    public void handleStockReservationResponse(@Payload StockReservedEvent event) {
+        log.info("Saga {} [{}] Received {} from warehouse.", event.getSagaId(), event.getOrderId(), "stock.reservation");
         CompletableFuture<StockReservedEvent> future = pendingRequests.get(event.getOrderId());
         if (future != null) {
             future.complete(event);
+//            return;
         }
+        // Если не нашли ожидающий запрос - игнорируем.
+        // Публикуем событие в Kafka - надо заходить в сагу как положено.
+
+        OrderSaga saga = sagaRepository.findById(event.getSagaId()).orElseThrow(() -> new RuntimeException("Saga not found"));
+        Order order = orderRepository.findById(event.getOrderId()).orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (event.getStatus().equals("RESERVED")){
+            // Резервирование успешно
+            order.setStatus(OrderStatus.PENDING_RESERVATION);
+            // Переходим к следующему шагу
+            saga.setCurrentStep("DELIVERY");
+        } else {
+            // резервирование провалилось, сагу отказываем
+            log.error("Stock reservation step failed for Order {}: {}", order.getId(), "");
+            saga.setStatus("FAILED");
+        }
+
+        orderRepository.save(order);
+        sagaRepository.save(saga);
+
+
+        OrderCreatedEvent nextEvent = OrderCreatedEvent.create(orderMapper.toOrderResultDto(order), this.getClass().getName(), event.getSagaId());
+        kafkaTemplate.send("order.saga.events", "order_warehouse_response" + order.getId(), nextEvent);
+//        if (event.getStatus().equals("RESERVED")) {
+//            kafkaTemplate.send("order.saga.events", "order_warehouse_reserved" + order.getId(), nextEvent);
+//        } else {
+//            kafkaTemplate.send("order.saga.events", "order_warehouse_failed" + order.getId(), nextEvent);
+//        }
     }
 
 

@@ -55,7 +55,6 @@ public class NotificationServiceImpl implements NotificationService {
         OrderEvent event = mapper.toOrderEvent(order);
         event.setContact(contact);
         event.setParentId(order.getId());
-//        event.setParentId(order.getId());
 
         switch (order.getStatus()) {
             case FAILED, DELIVERY_FAILED, INSUFFICIENT_FUNDS -> event.setNotificationType(NotificationType.FAIL);

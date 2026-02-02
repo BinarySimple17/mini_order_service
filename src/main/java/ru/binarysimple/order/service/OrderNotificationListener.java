@@ -11,7 +11,8 @@ import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.saga.events.OrderCreatedEvent;
 
 @Slf4j
-@Service
+//@Service
+@Deprecated
 @RequiredArgsConstructor
 public class OrderNotificationListener {
 

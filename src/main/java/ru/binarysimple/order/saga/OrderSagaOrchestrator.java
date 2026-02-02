@@ -4,12 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.binarysimple.order.dto.commands.MakePaymentCommand;
-import ru.binarysimple.order.dto.commands.PaymentProcessedEvent;
+import ru.binarysimple.order.saga.events.PaymentProcessedEvent;
 import ru.binarysimple.order.dto.commands.ReserveStockCommand;
-import ru.binarysimple.order.dto.commands.StockReservedEvent;
+import ru.binarysimple.order.saga.events.StockReservedEvent;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderSaga;
@@ -19,6 +20,7 @@ import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.events.OrderCreatedEvent;
 import ru.binarysimple.order.saga.steps.MakePaymentStep;
 import ru.binarysimple.order.saga.steps.ReserveStockStep;
+import ru.binarysimple.order.service.NotificationService;
 
 import java.util.UUID;
 
@@ -37,15 +39,17 @@ public class OrderSagaOrchestrator {
     private final OrderSagaRepository sagaRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @KafkaListener(topics = "order.saga.events", groupId = "order-service-group")
-    public void handleOrderCreatedEvent(OrderCreatedEvent event) {
+    private final NotificationService notificationService;
+
+    @KafkaListener(topics = "order.saga.events", groupId = "order-group")
+    public void handleOrderCreatedEvent(@Payload OrderCreatedEvent event) {
         log.info("Received OrderCreatedEvent for Order {}", event.getOrder().getId());
 
         OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
         Order order = getOrder(event.getOrder().getId());
 
         // Стартуем с первого этапа
-        if (saga.getCurrentStep().equals("PENDING")){
+        if (saga.getCurrentStep().equals("PENDING")) {
             saga.setCurrentStep("BILLING");
         }
 
@@ -55,6 +59,7 @@ public class OrderSagaOrchestrator {
             case "DELIVERY" -> deliveryStep(order, saga);
         }
 
+        notificationService.sendNotification(orderMapper.toOrderResultDto(order));
     }
 
     private void billingStep(Order order, OrderSaga saga) {
@@ -97,8 +102,15 @@ public class OrderSagaOrchestrator {
 
     private void warehouseStep(Order order, OrderSaga saga) {
 
-        ReserveStockCommand stockCmd = new ReserveStockCommand(orderMapper.toOrderResultDto(order));
-        StepExecutionResult<StockReservedEvent> stockResult = reserveStockStep.execute(stockCmd);
+        ReserveStockCommand stockCmd = new ReserveStockCommand(orderMapper.toOrderResultDto(order), saga.getId());
+
+        StepExecutionResult<StockReservedEvent> stockResult;
+
+        if (saga.getStatus().equals("FAILED")) {
+            stockResult = StepExecutionResult.failure("Stock reservation failed");
+        } else {
+            stockResult = reserveStockStep.execute(stockCmd);
+        }
 
         if (!stockResult.isSuccess()) {
             log.error("Stock reservation step failed for Order {}: {}", order.getId(), stockResult.getFailureReason());

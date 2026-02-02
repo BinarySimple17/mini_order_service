@@ -21,6 +21,19 @@ public class OrderSaga {
     private String currentStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
     private String status;      // e.g., "PROCESSING", "COMPENSATING", "COMPLETED", "FAILED"
     private LocalDateTime createdAt;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "expected_event_type")
+    private SagaExpectedEventType expectedEventType;    //событие, которое ждем
+
+    @Column(name = "expected_event_order_id")
+    private Long expectedEventOrderId; // orderId, для которого ждем событие
+
+    @Column(name = "wait_timeout_at")
+    private LocalDateTime waitTimeoutAt; // Время, до которого ждем ответ
+    // --------------------------------------------
 
     @PrePersist
     protected void onCreate() {

@@ -1,10 +1,10 @@
 package ru.binarysimple.order.saga.steps;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.binarysimple.order.client.BillingServiceClient;
 import ru.binarysimple.order.dto.OperationDto;
-import ru.binarysimple.order.dto.commands.PaymentProcessedEvent;
+import ru.binarysimple.order.saga.events.PaymentProcessedEvent;
 import ru.binarysimple.order.dto.commands.MakePaymentCommand;
 import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.model.OrderStatus;
@@ -12,9 +12,10 @@ import ru.binarysimple.order.saga.SagaStep;
 import ru.binarysimple.order.saga.StepExecutionResult;
 
 @Component
+@AllArgsConstructor
 public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProcessedEvent> {
 
-    @Autowired
+//    @Autowired
     private BillingServiceClient billingServiceClient; // Синхронный вызов
 
     @Override

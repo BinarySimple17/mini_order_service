@@ -41,9 +41,9 @@ public class OrderServiceImpl implements OrderService {
 
     private final ObjectMapper objectMapper;
 
-    private final BillingServiceClient billingServiceClient;
+//    private final BillingServiceClient billingServiceClient;
 
-    private final ApplicationEventPublisher eventPublisher;
+//    private final ApplicationEventPublisher eventPublisher;
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
