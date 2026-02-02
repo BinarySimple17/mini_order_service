@@ -2,10 +2,9 @@ package ru.binarysimple.order.saga.steps;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import ru.binarysimple.order.client.BillingServiceClient;
 import ru.binarysimple.order.dto.OperationDto;
 import ru.binarysimple.order.dto.commands.MakePaymentCommand;
@@ -25,11 +24,12 @@ import ru.binarysimple.order.saga.events.PaymentProcessedEvent;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static ru.binarysimple.order.model.OrderStatus.PAYMENT_FAILED;
+import static ru.binarysimple.order.model.OrderStatus.*;
 
 @Component
 @AllArgsConstructor
 @Slf4j
+@Transactional
 public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProcessedEvent> {
 
     private final OrderMapper orderMapper;
@@ -43,57 +43,54 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
         UUID sagaId = command.getSagaId();
         Long orderId = command.getOrder().getId();
 
-        // 1. Отправить команду в Kafka для оплаты
-        kafkaTemplate.send("billing.commands.make-payment", command);
-
-        // 2. Обновить состояние саги в БД: указать, что ждем StockReservedEvent
+        // 1. Сохранить состояние саги в БД: указать, что ожидаем ответ
         OrderSaga saga = sagaRepository.findById(sagaId).orElseThrow(() -> new RuntimeException("Saga not found for ID: " + sagaId));
-        saga.setStatus("WAITING"); // Новый статус
-        saga.setExpectedEventType(SagaExpectedEventType.PAYMENT_REQUESTED_EVENT); // <-- Используем ENUM
-        saga.setExpectedEventOrderId(orderId); // Для быстрого поиска
-        saga.setWaitTimeoutAt(LocalDateTime.now().plusSeconds(30)); // Установить таймаут
+        saga.setStatus("WAITING");
+        saga.setExpectedEventType(SagaExpectedEventType.PAYMENT_REQUESTED_EVENT);
+        saga.setExpectedEventOrderId(orderId);
+        saga.setWaitTimeoutAt(LocalDateTime.now().plusSeconds(30));
         sagaRepository.save(saga);
 
-        // 3. Вернуть "ожидающий" результат
-        return StepExecutionResult.waiting();
+        return processPayment(command);
     }
 
-    @KafkaListener(topics = "billing.commands.make-payment", groupId = "order-state-processor-group")
-    // Отдельная группа!
-    public void handleMakePaymentCommand(@Payload MakePaymentCommand event) {
-        log.info("Received MakePaymentCommand for Order {}: status={}", event.getOrder().getId(), event.getOrder().getStatus());
+    // Метод для синхронного выполнения оплаты и отправки результата
+    public StepExecutionResult<PaymentProcessedEvent> processPayment(MakePaymentCommand command) {
+        UUID sagaId = command.getSagaId();
+        Long orderId = command.getOrder().getId();
+
+        log.info("Processing payment for Order {} in Saga {}", orderId, sagaId);
 
         // 1. Найти сагу в БД по orderId и статусу ожидания
-        OrderSaga saga = sagaRepository.findByExpectedEventOrderIdAndExpectedEventTypeAndStatus(
-                event.getOrder().getId(),
-                SagaExpectedEventType.PAYMENT_REQUESTED_EVENT,
-                "WAITING"
-        ).orElseGet(() -> {
-            log.warn("Received MakePaymentCommand for unexpected/unwaited Order: {}", event.getOrder().getId());
-            return null; // Событие не ожидалось, игнорируем
-        });
+        OrderSaga saga = sagaRepository.findById(sagaId).orElseThrow(() -> new RuntimeException("Saga not found for ID: " + sagaId));
 
-        if (saga == null) {
-            return;
-        }
+//        // Проверяем, что сага действительно ожидает событие оплаты
+        // не проверяем, потому что синхронно
+//        if (!"WAITING".equals(saga.getStatus()) ||
+//                !SagaExpectedEventType.PAYMENT_REQUESTED_EVENT.equals(saga.getExpectedEventType()) ||
+//                !orderId.equals(saga.getExpectedEventOrderId())) {
+//            log.warn("Saga {} is not in expected state for payment processing. Status: {}, ExpectedEventType: {}, ExpectedOrderId: {}",
+//                    sagaId, saga.getStatus(), saga.getExpectedEventType(), saga.getExpectedEventOrderId());
+//            return StepExecutionResult.failure("Saga not in expected state");
+//        }
 
-        Order order = orderRepository.findById(event.getOrder().getId()).orElseThrow(() -> new RuntimeException("Order not found for ID: " + event.getOrder().getId()));
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found for ID: " + orderId));
 
         // 2. Проверить, не истекло ли время ожидания
         if (LocalDateTime.now().isAfter(saga.getWaitTimeoutAt())) {
-            log.warn("Received MakePaymentCommand for Order {}, but timeout expired at {}", event.getOrder().getId(), saga.getWaitTimeoutAt());
-            // Обработать таймаут: установить статус FAILED, запустить компенсацию
+            log.warn("Payment processing for Order {} in Saga {} failed due to timeout", orderId, sagaId);
+            // Обработать таймаут
             handleTimeout(saga, order);
-            return;
+            return StepExecutionResult.failure("Payment timeout");
         }
 
-        //выполняем платеж синхронный
-        StepExecutionResult<PaymentProcessedEvent> result = callBillingService(event);
+        // 3. Выполняем синхронный вызов сервиса оплаты
+        StepExecutionResult<PaymentProcessedEvent> result = callBillingService(command);
 
-//         3. Проверить результат события
+        // 4. Проверить результат вызова
         if (!result.isSuccess()) {
+            log.error("Billing service call failed for Order {}: {}", order.getId(), result.getFailureReason());
             saga.setStatus("FAILED");
-            sagaRepository.save(saga);
             sagaRepository.save(saga);
             try {
                 order.setStatus(OrderStatus.valueOf(result.getFailureReason()));
@@ -101,21 +98,27 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
                 order.setStatus(PAYMENT_FAILED);
             }
             orderRepository.save(order);
-            // нечего откатывать, так что не публикуем
-        } else {
-            // 4. Обновить состояние саги: сбросить ожидание, перейти к следующему шагу
-            saga.setStatus("PROCESSING"); // Снова активна
-            saga.setCurrentStep("WAREHOUSE"); // Следующий шаг
-            saga.setExpectedEventType(null); // Сброс ожидания
-            saga.setExpectedEventOrderId(null);
-            saga.setWaitTimeoutAt(null);
-            sagaRepository.save(saga);
-
-            // 5. Повторно запустить оркестратор
-            OrderCreatedEvent nextEvent = OrderCreatedEvent.create(orderMapper.toOrderResultDto(order), this.getClass().getSimpleName(), saga.getId());
-            kafkaTemplate.send("order.saga.events", "order_payment_made_" + event.getOrder().getId(), nextEvent);
-
+            // Сохраняем состояние, но не публикуем события, так как отката нет
+            return result;
         }
+
+        // 5. Успешная оплата: сбросить ожидание и обновить статус саги
+        saga.setStatus("PROCESSING");
+        saga.setCurrentStep("WAREHOUSE");
+        saga.setExpectedEventType(null);
+        saga.setExpectedEventOrderId(null);
+        saga.setWaitTimeoutAt(null);
+        sagaRepository.save(saga);
+
+        order.setStatus(PENDING_PAYMENT);
+        orderRepository.save(order);
+
+        // 6. Отправить событие в Kafka для перехода на следующий шаг
+        OrderCreatedEvent nextEvent = OrderCreatedEvent.create(orderMapper.toOrderResultDto(order), this.getClass().getSimpleName(), saga.getId());
+        kafkaTemplate.send("order.saga.events", "order_payment_made_" + command.getOrder().getId(), nextEvent);
+
+        log.info("Payment processed and event sent for Order {}", order.getId());
+        return result;
     }
 
     private void handleTimeout(OrderSaga saga, Order order) {

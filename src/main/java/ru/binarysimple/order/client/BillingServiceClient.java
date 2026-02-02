@@ -72,20 +72,4 @@ public class BillingServiceClient {
     public OperationDto cancelPayment(OrderResultDto order) {
         return executeOperation(order, OperationType.REFUND, "canceling payment");
     }
-
-//    public OperationDto reserveFunds(Order order) {
-//        return executeOperation(order, OperationType.RESERVE, "fund reservation");
-//    }
-//
-//    public OperationDto confirmPayment(Order order) {
-//        return executeOperation(order, OperationType.CONFIRM, "payment confirmation");
-//    }
-//
-//    public OperationDto cancelReservation(Order order) {
-//        return executeOperation(order, OperationType.CANCEL_RESERVATION, "reservation cancellation");
-//    }
-//
-//    public OperationDto refundPayment(Order order) {
-//        return executeOperation(order, OperationType.REFUND, "refund");
-//    }
 }

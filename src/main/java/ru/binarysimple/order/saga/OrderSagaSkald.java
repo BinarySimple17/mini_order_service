@@ -17,6 +17,8 @@ import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.events.OrderCreatedEvent;
+import ru.binarysimple.order.saga.events.PaymentProcessedEvent;
+import ru.binarysimple.order.saga.events.StockReservedEvent;
 import ru.binarysimple.order.saga.steps.MakePaymentStep;
 import ru.binarysimple.order.saga.steps.ReserveStockStep;
 import ru.binarysimple.order.service.NotificationService;
@@ -60,7 +62,7 @@ public class OrderSagaSkald {
     }
 
     @KafkaListener(topics = "order.saga.compensate", groupId = "order-group")
-    public void handleOrderCreatedEvent(@Payload OrderCompensateEvent event) {
+    public void handleOrderCompensateEvent(@Payload OrderCompensateEvent event) {
         log.info("Received OrderCompensateEvent for Order {}", event.getOrder().getId());
 
         OrderSaga saga = getSaga(event.getSagaId(), event.getOrder().getId());
@@ -73,6 +75,11 @@ public class OrderSagaSkald {
         }
 
         notificationService.sendNotification(orderMapper.toOrderResultDto(order));
+    }
+
+    @KafkaListener(topics = "warehouse.responses", groupId = "order-group") // Отдельная группа!
+    public void handleStockReservationResponse(@Payload StockReservedEvent event) {
+        reserveStockStep.processStockResponse(event);
     }
 
     private void billingCompensateStep(Order order, OrderSaga saga) {
@@ -102,74 +109,19 @@ public class OrderSagaSkald {
         saga.setCurrentStep("BILLING");
         sagaRepository.save(saga);
 
+        // Создаем команду на оплату
         MakePaymentCommand paymentCmd = new MakePaymentCommand(orderMapper.toOrderResultDto(order), saga.getId());
+
+        // Отправляем команду в шаг оплаты, который сохранит состояние и выполнит оплату синхронно
         makePaymentStep.execute(paymentCmd);
 
-//        StepExecutionResult<PaymentProcessedEvent> paymentResult = makePaymentStep.execute(paymentCmd);
-//
-//        if (!paymentResult.isSuccess()) {
-//            log.error("Payment step failed for Order {}: {}", order.getId(), paymentResult.getFailureReason());
-//            try {
-//                order.setStatus(OrderStatus.valueOf(paymentResult.getFailureReason()));
-//            } catch (IllegalArgumentException e) {
-//                order.setStatus(PAYMENT_FAILED);
-//            }
-//            orderRepository.save(order);
-//
-//            saga.setStatus("FAILED");
-//            sagaRepository.save(saga);
-//            // нечего откатывать, так что не публикуем
-//            return;
-//        }
-//
-//        // Оплата успешна
-//        order.setStatus(OrderStatus.PENDING_PAYMENT);
-//        orderRepository.save(order);
-//
-//        // Переходим к следующему шагу
-//        saga.setCurrentStep("WAREHOUSE");
-//        sagaRepository.save(saga);
-//
-//        // Публикуем событие в Kafka
-//        OrderCreatedEvent nextEvent = OrderCreatedEvent.create(orderMapper.toOrderResultDto(order), this.getClass().getName(), saga.getId());
-//        kafkaTemplate.send("order.saga.events", "order_paid" + order.getId(), nextEvent);
     }
 
     private void warehouseStep(Order order, OrderSaga saga) {
 
         ReserveStockCommand stockCmd = new ReserveStockCommand(orderMapper.toOrderResultDto(order), saga.getId());
 
-        compensateStep(reserveStockStep, stockCmd);
-//
-//        StepExecutionResult<StockReservedEvent> stockResult;
-//
-//        if (saga.getStatus().equals("FAILED")) {
-//            stockResult = StepExecutionResult.failure("Stock reservation failed");
-//        } else {
-//            stockResult = reserveStockStep.execute(stockCmd);
-//        }
-//
-//        if (!stockResult.isSuccess()) {
-//            log.error("Stock reservation step failed for Order {}: {}", order.getId(), stockResult.getFailureReason());
-//            order.setStatus(OrderStatus.RESERVATION_FAILED);
-//            orderRepository.save(order);
-//
-//            saga.setStatus("FAILED");
-//            sagaRepository.save(saga);
-//
-//            // Компенсируем предыдущий шаг (отмена оплаты)
-//            MakePaymentCommand paymentCmd = new MakePaymentCommand(order);
-//            compensateStep(makePaymentStep, paymentCmd);
-//            return;
-//        }
-//
-//        // Резервирование успешно
-//        order.setStatus(OrderStatus.PENDING_RESERVATION);
-//        orderRepository.save(order);
-//
-//        // Переходим к следующему шагу
-//        saga.setCurrentStep("DELIVERY");
-//        sagaRepository.save(saga);
+        reserveStockStep.execute(stockCmd);
 
     }
 
