@@ -24,6 +24,7 @@ import ru.binarysimple.order.saga.events.PaymentProcessedEvent;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static ru.binarysimple.order.model.OrderSagaStep.WAREHOUSE;
 import static ru.binarysimple.order.model.OrderStatus.*;
 
 @Component
@@ -104,7 +105,7 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
 
         // 5. Успешная оплата: сбросить ожидание и обновить статус саги
         saga.setStatus("PROCESSING");
-        saga.setCurrentStep("WAREHOUSE");
+        saga.setCurrentStep(WAREHOUSE);
         saga.setExpectedEventType(null);
         saga.setExpectedEventOrderId(null);
         saga.setWaitTimeoutAt(null);
@@ -115,7 +116,7 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
 
         // 6. Отправить событие в Kafka для перехода на следующий шаг
         OrderCreatedEvent nextEvent = OrderCreatedEvent.create(orderMapper.toOrderResultDto(order), this.getClass().getSimpleName(), saga.getId());
-        kafkaTemplate.send("order.saga.events", "order_payment_made_" + command.getOrder().getId(), nextEvent);
+        kafkaTemplate.send("order.saga.events", command.getOrder().getId().toString(), nextEvent);
 
         log.info("Payment processed and event sent for Order {}", order.getId());
         return result;

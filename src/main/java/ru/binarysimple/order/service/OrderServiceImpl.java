@@ -30,6 +30,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import static ru.binarysimple.order.model.OrderSagaStep.PENDING;
+
 @RequiredArgsConstructor
 @Service
 @Transactional
@@ -40,10 +42,6 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
 
     private final ObjectMapper objectMapper;
-
-//    private final BillingServiceClient billingServiceClient;
-
-//    private final ApplicationEventPublisher eventPublisher;
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -70,38 +68,6 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
     }
 
-//    // Этот метод оставлен для обратной совместимости
-//    // В новом коде следует использовать OrderSagaManager для создания заказов
-//    @Deprecated
-//    public OrderResultDto create_deprecated(OrderDto dto) {
-//        Order order = orderMapper.toEntity(dto);
-//
-//        order.setStatus(OrderStatus.NEW);
-//
-//        // Устанавливаем связь между заказом и позициями
-////        order.getOrderPositions().forEach(position -> position.setOrderId(order.getId()));
-//        order.getOrderPositions().forEach(position -> position.setOrder(order));
-//
-//        try {
-//            OperationDto operation = billingServiceClient.makePayment(order);
-//            order.setStatus(OrderStatus.PAID);
-//        } catch (BillingServiceException billingServiceException) {
-//            order.setStatus(OrderStatus.INSUFFICIENT_FUNDS);
-//        } catch (Exception e) {
-//            order.setStatus(OrderStatus.FAILED);
-//        }
-//
-//
-//        Order resultOrder = orderRepository.save(order);
-//
-//        // публикуем событие - оно будет обработано ПОСЛЕ коммита
-//        // в этом событии топравка сообщения в кафку
-//        // только для transactional
-//        eventPublisher.publishEvent(new OrderCreatedEvent(orderMapper.toOrderResultDto(resultOrder), Class.class.getName(), null));
-//
-//        return orderMapper.toOrderResultDto(resultOrder);
-//    }
-
     @Override
     public OrderResultDto create(OrderDto dto) {
         Order order = orderMapper.toEntity(dto);
@@ -116,7 +82,7 @@ public class OrderServiceImpl implements OrderService {
         // Создаем и сохраняем OrderSaga
         OrderSaga saga = new OrderSaga();
         saga.setOrderId(resultOrder.getId());
-        saga.setCurrentStep("PENDING");
+        saga.setCurrentStep(PENDING);
         saga.setStatus("CREATED");
         sagaRepository.save(saga);
 

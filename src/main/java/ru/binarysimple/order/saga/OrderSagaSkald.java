@@ -8,16 +8,16 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.binarysimple.order.dto.commands.MakePaymentCommand;
-import ru.binarysimple.order.saga.events.OrderCompensateEvent;
 import ru.binarysimple.order.dto.commands.ReserveStockCommand;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderSaga;
+import ru.binarysimple.order.model.OrderSagaStep;
 import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
+import ru.binarysimple.order.saga.events.OrderCompensateEvent;
 import ru.binarysimple.order.saga.events.OrderCreatedEvent;
-import ru.binarysimple.order.saga.events.PaymentProcessedEvent;
 import ru.binarysimple.order.saga.events.StockReservedEvent;
 import ru.binarysimple.order.saga.steps.MakePaymentStep;
 import ru.binarysimple.order.saga.steps.ReserveStockStep;
@@ -48,14 +48,14 @@ public class OrderSagaSkald {
         Order order = getOrder(event.getOrder().getId());
 
         // Стартуем с первого этапа
-        if (saga.getCurrentStep().equals("PENDING")) {
-            saga.setCurrentStep("BILLING");
+        if (saga.getCurrentStep() == OrderSagaStep.PENDING) {
+            saga.setCurrentStep(OrderSagaStep.BILLING);
         }
 
         switch (saga.getCurrentStep()) {
-            case "BILLING" -> billingStep(order, saga);
-            case "WAREHOUSE" -> warehouseStep(order, saga);
-            case "DELIVERY" -> deliveryStep(order, saga);
+            case BILLING -> billingStep(order, saga);
+            case WAREHOUSE -> warehouseStep(order, saga);
+            case DELIVERY -> deliveryStep(order, saga);
         }
 
         notificationService.sendNotification(orderMapper.toOrderResultDto(order));
@@ -69,9 +69,9 @@ public class OrderSagaSkald {
         Order order = getOrder(event.getOrder().getId());
 
         switch (saga.getCompensateStep()) {
-            case "BILLING" -> billingCompensateStep(order, saga);
-            case "WAREHOUSE" -> warehouseCompensateStep(order, saga);
-            case "DELIVERY" -> deliveryCompensateStep(order, saga);
+            case BILLING -> billingCompensateStep(order, saga);
+            case WAREHOUSE -> warehouseCompensateStep(order, saga);
+            case DELIVERY -> deliveryCompensateStep(order, saga);
         }
 
         notificationService.sendNotification(orderMapper.toOrderResultDto(order));
@@ -84,12 +84,12 @@ public class OrderSagaSkald {
 
     private void billingCompensateStep(Order order, OrderSaga saga) {
 // синхронный и последний
-            MakePaymentCommand paymentCmd = new MakePaymentCommand(orderMapper.toOrderResultDto(order), saga.getId());
-            compensateStep(makePaymentStep, paymentCmd);
+        MakePaymentCommand paymentCmd = new MakePaymentCommand(orderMapper.toOrderResultDto(order), saga.getId());
+        compensateStep(makePaymentStep, paymentCmd);
 
-            saga.setStatus("COMPENSATED");
-            saga.setCompensateStep(null);
-            sagaRepository.save(saga);
+        saga.setStatus("COMPENSATED");
+        saga.setCompensateStep(null);
+        sagaRepository.save(saga);
     }
 
     private void warehouseCompensateStep(Order order, OrderSaga saga) {
@@ -106,7 +106,7 @@ public class OrderSagaSkald {
     private void billingStep(Order order, OrderSaga saga) {
         // Первый шаг: оплата
         saga.setStatus("PROCESSING");
-        saga.setCurrentStep("BILLING");
+        saga.setCurrentStep(OrderSagaStep.BILLING);
         sagaRepository.save(saga);
 
         // Создаем команду на оплату
@@ -143,7 +143,7 @@ public class OrderSagaSkald {
             OrderSaga newSaga = new OrderSaga();
             newSaga.setId(id);
             newSaga.setOrderId(orderId);
-            newSaga.setCurrentStep("PENDING");
+            newSaga.setCurrentStep(OrderSagaStep.PENDING);
             return newSaga;
         });
         return saga;

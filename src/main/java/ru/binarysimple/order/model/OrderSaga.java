@@ -18,8 +18,10 @@ public class OrderSaga {
     private UUID id;
 
     private Long orderId;
-    private String currentStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
-    private String compensateStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
+    @Enumerated(EnumType.STRING)
+    private OrderSagaStep currentStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
+    @Enumerated(EnumType.STRING)
+    private OrderSagaStep compensateStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
     private String status;      // e.g., "PROCESSING", "COMPENSATING", "COMPLETED", "FAILED"
     private LocalDateTime createdAt;
     @Column(name = "updated_at")
