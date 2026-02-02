@@ -105,7 +105,7 @@ public class OrderSagaOrchestrator {
             order.setStatus(OrderStatus.RESERVATION_FAILED);
             orderRepository.save(order);
 
-            saga.setStatus("COMPENSATING");
+            saga.setStatus("FAILED");
             sagaRepository.save(saga);
 
             // Компенсируем предыдущий шаг (отмена оплаты)
