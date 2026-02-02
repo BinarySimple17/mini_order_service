@@ -7,17 +7,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
-import ru.binarysimple.order.dto.AccountOperationDto;
-import ru.binarysimple.order.dto.ErrorDto;
-import ru.binarysimple.order.dto.OperationDto;
-import ru.binarysimple.order.dto.OperationRequest;
+import ru.binarysimple.order.dto.*;
 import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.model.OperationType;
 import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.model.OrderStatus;
-
-import java.net.URI;
 
 @Component
 @Slf4j
@@ -30,7 +23,7 @@ public class BillingServiceClient {
     @Autowired
     public BillingServiceClient(@Value("${endpoints.billing-service:http://test-name:8081}") String baseUrl) {
 
-        log.info("UsersServiceClient baseUrl: {}", baseUrl);
+        log.info("BillingServiceClient baseUrl: {}", baseUrl);
         this.baseUrl = baseUrl;
 
         this.restClient = RestClient.builder()
@@ -38,23 +31,15 @@ public class BillingServiceClient {
                 .build();
     }
 
-    public OperationDto makePayment(Order order) {
-        log.info("Calling billing-service to make payment for user: {}", order.getUsername());
+    private OperationDto executeOperation(Order order, OperationType operationType, String operationName) {
+        log.info("Initiating {} for order {}", operationName, order.getId());
 
         OperationRequest operationRequest = new OperationRequest(
-                OperationType.PAYMENT,
+                operationType,
                 order.getTotalCost(),
-                new AccountOperationDto(order.getUsername()));
+                new AccountOperationDto(order.getUsername()),
+                order.getId());
 
-        String uriTemplate = "/billing/account/operate";
-        // Построим финальный URI
-        URI finalUri = UriComponentsBuilder
-                .fromHttpUrl(baseUrl)
-                .path(uriTemplate)
-                .buildAndExpand(order.getUsername())
-                .encode()
-                .toUri();
-        log.info("Calling billing-service: POST {}", finalUri);
         try {
             OperationDto operation = restClient
                     .post()
@@ -63,20 +48,44 @@ public class BillingServiceClient {
                     .body(operationRequest)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        // Читаем тело ошибки как ErrorDto
                         String responseBody = new String(response.getBody().readAllBytes());
                         ErrorDto errorDto = objectMapper.readValue(responseBody, ErrorDto.class);
-                        log.warn("Billing service returned 4xx: {}", errorDto.getMessage());
+                        log.warn("Billing service returned 4xx during {}: {}", operationName, errorDto.getMessage());
                         throw new BillingServiceException(errorDto.getMessage(), errorDto);
                     })
                     .body(OperationDto.class);
-            log.info("Successfully made payment for: {}", order.getUsername());
+            log.info("Successfully completed {} for order {}", operationName, order.getId());
             return operation;
         } catch (BillingServiceException billingServiceException) {
+            log.error("Failed to {}: {}", operationName, billingServiceException.getMessage());
             throw billingServiceException;
         } catch (Exception e) {
-            log.error("Failed to make payment for {}: {}", order.getUsername(), e.getMessage());
-            throw new RuntimeException("Failed to call billing-service: " + e.getMessage(), e);
+            log.error("Error during {}: {}", operationName, e.getMessage());
+            throw new RuntimeException("Failed to call billing-service for " + operationName + ": " + e.getMessage(), e);
         }
     }
+
+    public OperationDto makePayment(Order order) {
+        return executeOperation(order, OperationType.PAYMENT, "payment");
+    }
+
+    public OperationDto cancelPayment(Order order) {
+        return executeOperation(order, OperationType.REFUND, "canceling payment");
+    }
+
+//    public OperationDto reserveFunds(Order order) {
+//        return executeOperation(order, OperationType.RESERVE, "fund reservation");
+//    }
+//
+//    public OperationDto confirmPayment(Order order) {
+//        return executeOperation(order, OperationType.CONFIRM, "payment confirmation");
+//    }
+//
+//    public OperationDto cancelReservation(Order order) {
+//        return executeOperation(order, OperationType.CANCEL_RESERVATION, "reservation cancellation");
+//    }
+//
+//    public OperationDto refundPayment(Order order) {
+//        return executeOperation(order, OperationType.REFUND, "refund");
+//    }
 }

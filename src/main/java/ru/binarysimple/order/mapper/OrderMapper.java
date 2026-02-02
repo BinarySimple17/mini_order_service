@@ -16,6 +16,8 @@ public interface OrderMapper {
 
     OrderEvent toOrderEvent(Order order);
 
+    OrderEvent toOrderEvent(OrderResultDto order);
+
     Order updateWithNull(OrderDto orderDto, @MappingTarget Order order);
 
     Order toEntity(OrderResultDto orderResultDto);

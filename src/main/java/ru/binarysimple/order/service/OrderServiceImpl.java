@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,13 +16,14 @@ import ru.binarysimple.order.client.BillingServiceClient;
 import ru.binarysimple.order.dto.OperationDto;
 import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
-import ru.binarysimple.order.event.OrderCreatedEvent;
 import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.model.OrderPosition;
+import ru.binarysimple.order.model.OrderSaga;
 import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.repository.OrderRepository;
+import ru.binarysimple.order.repository.OrderSagaRepository;
+import ru.binarysimple.order.saga.events.OrderCreatedEvent;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -42,6 +44,10 @@ public class OrderServiceImpl implements OrderService {
     private final BillingServiceClient billingServiceClient;
 
     private final ApplicationEventPublisher eventPublisher;
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    private final OrderSagaRepository sagaRepository;
 
     @Override
     public Page<OrderResultDto> getAll(Pageable pageable) {
@@ -64,6 +70,38 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
     }
 
+//    // Этот метод оставлен для обратной совместимости
+//    // В новом коде следует использовать OrderSagaManager для создания заказов
+//    @Deprecated
+//    public OrderResultDto create_deprecated(OrderDto dto) {
+//        Order order = orderMapper.toEntity(dto);
+//
+//        order.setStatus(OrderStatus.NEW);
+//
+//        // Устанавливаем связь между заказом и позициями
+////        order.getOrderPositions().forEach(position -> position.setOrderId(order.getId()));
+//        order.getOrderPositions().forEach(position -> position.setOrder(order));
+//
+//        try {
+//            OperationDto operation = billingServiceClient.makePayment(order);
+//            order.setStatus(OrderStatus.PAID);
+//        } catch (BillingServiceException billingServiceException) {
+//            order.setStatus(OrderStatus.INSUFFICIENT_FUNDS);
+//        } catch (Exception e) {
+//            order.setStatus(OrderStatus.FAILED);
+//        }
+//
+//
+//        Order resultOrder = orderRepository.save(order);
+//
+//        // публикуем событие - оно будет обработано ПОСЛЕ коммита
+//        // в этом событии топравка сообщения в кафку
+//        // только для transactional
+//        eventPublisher.publishEvent(new OrderCreatedEvent(orderMapper.toOrderResultDto(resultOrder), Class.class.getName(), null));
+//
+//        return orderMapper.toOrderResultDto(resultOrder);
+//    }
+
     @Override
     public OrderResultDto create(OrderDto dto) {
         Order order = orderMapper.toEntity(dto);
@@ -73,22 +111,19 @@ public class OrderServiceImpl implements OrderService {
         // Устанавливаем связь между заказом и позициями
         order.getOrderPositions().forEach(position -> position.setOrder(order));
 
-        try {
-            OperationDto operation = billingServiceClient.makePayment(order);
-            order.setStatus(OrderStatus.PAID);
-        } catch (BillingServiceException billingServiceException){
-            order.setStatus(OrderStatus.INSUFFICIENT_FUNDS);
-        } catch (Exception e) {
-            order.setStatus(OrderStatus.FAILED);
-        }
-
-
         Order resultOrder = orderRepository.save(order);
 
-        // публикуем событие - оно будет обработано ПОСЛЕ коммита
-        // в этом событии топравка сообщения в кафку
-        // только для transactional
-        eventPublisher.publishEvent(new OrderCreatedEvent(resultOrder, Class.class.getName()));
+        // Создаем и сохраняем OrderSaga
+        OrderSaga saga = new OrderSaga();
+        saga.setOrderId(resultOrder.getId());
+        saga.setCurrentStep("PENDING");
+        saga.setStatus("CREATED");
+        sagaRepository.save(saga);
+
+        // Публикуем событие в Kafka
+        OrderCreatedEvent event = OrderCreatedEvent.create(orderMapper.toOrderResultDto(resultOrder), this.getClass().getName(), saga.getId());
+//        OrderCreatedEvent event = new OrderCreatedEvent(orderMapper.toOrderResultDto(resultOrder), this.getClass().getName(), saga.getId());
+        kafkaTemplate.send("order.saga.events", "order_created" + resultOrder.getId(), event);
 
         return orderMapper.toOrderResultDto(resultOrder);
     }
@@ -97,7 +132,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderResultDto patch(Long id, JsonNode patchNode) throws IOException {
         Order order = orderRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Entity with id `%s` not found".formatted(id)));
-        
+
         ObjectReader reader = objectMapper.readerForUpdating(order);
         Order updated = reader.readValue(patchNode);
 

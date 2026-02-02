@@ -1,7 +1,7 @@
 package ru.binarysimple.order.dto;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.Value;
+import lombok.*;
 import ru.binarysimple.order.model.OrderPosition;
 
 import java.math.BigDecimal;
@@ -9,7 +9,10 @@ import java.math.BigDecimal;
 /**
  * DTO for {@link OrderPosition}
  */
-@Value
+@Setter
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class OrderPositionDto {
     @NotNull
     Long productId;
@@ -17,5 +20,6 @@ public class OrderPositionDto {
     BigDecimal price;
     @NotNull
     Integer quantity;
-
+//    @NotNull
+//    Long orderId;
 }

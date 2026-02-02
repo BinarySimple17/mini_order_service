@@ -1,0 +1,41 @@
+```plantuml
+@startuml "Асинхронная Saga с использованием событий и фоновых воркеров"
+!theme plain
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Подход на основе событий и фоновых воркеров для асинхронной Saga
+
+' Define participants
+actor Customer as C
+System_Boundary appBoundary <<Boundary>> "Order Service Application"
+System_Boundary kafkaBoundary <<Boundary>> "Message Broker (Kafka)"
+
+Container(api_gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа, верификация JWT")
+Container(order_service, "Order Service", "Spring Boot", "Управление заказами, оркестрация")
+Container(order_saga_worker, "Saga Worker", "Spring Boot Bean/Service", "Фоновый процесс выполнения шагов саги")
+ContainerDb(order_db, "Order DB", "PostgreSQL", "Хранит состояние заказа и саги")
+
+Container(kafka_topic_events, "Order Events Topic", "Kafka Topic", "События: OrderCreated, PaymentProcessed, etc.")
+Container(kafka_topic_commands, "Commands Topics", "Kafka Topics", "Команды: MakePaymentCommand, ReserveStockCommand, etc.")
+
+System_Ext(billing_service, "Billing Service", "Spring Boot", "Обработка платежей")
+System_Ext(warehouse_service, "Warehouse Service", "Spring Boot", "Управление запасами")
+
+Rel(C, api_gateway, "Creates Order", "HTTPS POST /api/v1/order")
+Rel(api_gateway, order_service, "Forwards Request", "Internal Call")
+Rel(order_service, order_db, "Saves Initial Order", "JDBC/ORM")
+Rel(order_service, kafka_topic_events, "Publishes OrderCreatedEvent", "Kafka Producer")
+
+Rel(order_saga_worker, order_db, "Loads Saga State", "JDBC/ORM")
+Rel(order_saga_worker, kafka_topic_events, "Subscribes to Events", "Kafka Consumer")
+Rel(order_saga_worker, kafka_topic_commands, "Publishes Commands", "Kafka Producer")
+Rel(kafka_topic_commands, billing_service, "Receives MakePaymentCommand", "Kafka Consumer")
+Rel(kafka_topic_commands, warehouse_service, "Receives ReserveStockCommand", "Kafka Consumer")
+
+Rel(billing_service, kafka_topic_events, "Publishes PaymentProcessedEvent", "Kafka Producer")
+Rel(warehouse_service, kafka_topic_events, "Publishes StockReservedEvent", "Kafka Producer")
+
+Rel(order_saga_worker, order_db, "Updates Saga/Order Status", "JDBC/ORM")
+
+@enduml
+```

@@ -1,11 +1,13 @@
 package ru.binarysimple.order.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.lang3.builder.ToStringExclude;
+import ru.binarysimple.order.dto.OrderDto;
 
 import java.math.BigDecimal;
 
@@ -27,6 +29,7 @@ public class OrderPosition {
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "order_id")
     @ToStringExclude
+    @JsonIgnore
     private Order order;
 
 //    public void setOrder(Order order) {
