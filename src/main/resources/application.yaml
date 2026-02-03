@@ -86,3 +86,7 @@ app:
   kafka:
     topics:
       order-events: order.events
+  outbox:
+    retry-max-count: 3
+    send-timeout-seconds: 5
+    interval: 5000

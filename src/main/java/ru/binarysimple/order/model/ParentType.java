@@ -1,7 +1,8 @@
 package ru.binarysimple.order.model;
 
 public enum ParentType {
-    ORDER("Order");
+    ORDER("Order"),
+    SAGA("Saga");
 
     private final String parentName;
 
