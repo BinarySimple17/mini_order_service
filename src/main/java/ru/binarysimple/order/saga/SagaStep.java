@@ -17,5 +17,7 @@ public interface SagaStep<Command, EventResult> {
      * @return Результат компенсации.
      */
     StepExecutionResult<EventResult> compensate(Command command);
+
+    StepExecutionResult<EventResult> processEvent(EventResult event);
 }
 

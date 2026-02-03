@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -12,14 +11,11 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import ru.binarysimple.order.client.BillingServiceClient;
-import ru.binarysimple.order.dto.OperationDto;
 import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
-import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.model.OrderSaga;
+import ru.binarysimple.order.model.saga.OrderSaga;
 import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
@@ -30,7 +26,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-import static ru.binarysimple.order.model.OrderSagaStep.PENDING;
+import static ru.binarysimple.order.model.saga.OrderSagaStep.PENDING;
 
 @RequiredArgsConstructor
 @Service

@@ -1,4 +1,4 @@
-package ru.binarysimple.order.model;
+package ru.binarysimple.order.model.saga;
 
 public enum OrderSagaStep {
     PENDING,

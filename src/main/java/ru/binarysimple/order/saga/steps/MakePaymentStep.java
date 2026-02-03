@@ -11,9 +11,10 @@ import ru.binarysimple.order.dto.commands.MakePaymentCommand;
 import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.model.OrderSaga;
+import ru.binarysimple.order.model.saga.OrderSaga;
 import ru.binarysimple.order.model.OrderStatus;
-import ru.binarysimple.order.model.SagaExpectedEventType;
+import ru.binarysimple.order.model.saga.OrderSagaStatus;
+import ru.binarysimple.order.model.saga.SagaExpectedEventType;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.SagaStep;
@@ -24,7 +25,9 @@ import ru.binarysimple.order.saga.events.PaymentProcessedEvent;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static ru.binarysimple.order.model.OrderSagaStep.WAREHOUSE;
+import static ru.binarysimple.order.model.saga.OrderSagaStatus.PROCESSING;
+import static ru.binarysimple.order.model.saga.OrderSagaStatus.WAITING;
+import static ru.binarysimple.order.model.saga.OrderSagaStep.WAREHOUSE;
 import static ru.binarysimple.order.model.OrderStatus.*;
 
 @Component
@@ -46,7 +49,7 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
 
         // 1. Сохранить состояние саги в БД: указать, что ожидаем ответ
         OrderSaga saga = sagaRepository.findById(sagaId).orElseThrow(() -> new RuntimeException("Saga not found for ID: " + sagaId));
-        saga.setStatus("WAITING");
+        saga.setStatus(WAITING);
         saga.setExpectedEventType(SagaExpectedEventType.PAYMENT_REQUESTED_EVENT);
         saga.setExpectedEventOrderId(orderId);
         saga.setWaitTimeoutAt(LocalDateTime.now().plusSeconds(30));
@@ -57,6 +60,7 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
 
     // Метод для синхронного выполнения оплаты и отправки результата
     public StepExecutionResult<PaymentProcessedEvent> processPayment(MakePaymentCommand command) {
+//    public StepExecutionResult<PaymentProcessedEvent> processPayment(MakePaymentCommand command) {
         UUID sagaId = command.getSagaId();
         Long orderId = command.getOrder().getId();
 
@@ -91,7 +95,7 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
         // 4. Проверить результат вызова
         if (!result.isSuccess()) {
             log.error("Billing service call failed for Order {}: {}", order.getId(), result.getFailureReason());
-            saga.setStatus("FAILED");
+            saga.setStatus(OrderSagaStatus.FAILED);
             sagaRepository.save(saga);
             try {
                 order.setStatus(OrderStatus.valueOf(result.getFailureReason()));
@@ -104,7 +108,7 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
         }
 
         // 5. Успешная оплата: сбросить ожидание и обновить статус саги
-        saga.setStatus("PROCESSING");
+        saga.setStatus(PROCESSING);
         saga.setCurrentStep(WAREHOUSE);
         saga.setExpectedEventType(null);
         saga.setExpectedEventOrderId(null);
@@ -125,7 +129,7 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
     private void handleTimeout(OrderSaga saga, Order order) {
         log.error("Payment failed timeout for Order {} in Saga {}", saga.getOrderId(), saga.getId());
 
-        saga.setStatus("FAILED");
+        saga.setStatus(OrderSagaStatus.FAILED);
         sagaRepository.save(saga);
         order.setStatus(PAYMENT_FAILED);
         orderRepository.save(order);
@@ -160,5 +164,11 @@ public class MakePaymentStep implements SagaStep<MakePaymentCommand, PaymentProc
         } catch (Exception e) {
             return StepExecutionResult.failure("Exception during payment cancellation: " + e.getMessage());
         }
+    }
+
+    @Override
+    public StepExecutionResult<PaymentProcessedEvent> processEvent(PaymentProcessedEvent event) {
+        log.info("MakePaymentStep was synchronously made payment when execute()");
+        return StepExecutionResult.waiting();
     }
 }

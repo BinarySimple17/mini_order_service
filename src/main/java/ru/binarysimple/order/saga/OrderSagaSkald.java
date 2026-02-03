@@ -11,9 +11,10 @@ import ru.binarysimple.order.dto.commands.MakePaymentCommand;
 import ru.binarysimple.order.dto.commands.ReserveStockCommand;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.model.OrderSaga;
-import ru.binarysimple.order.model.OrderSagaStep;
 import ru.binarysimple.order.model.OrderStatus;
+import ru.binarysimple.order.model.saga.OrderSaga;
+import ru.binarysimple.order.model.saga.OrderSagaStep;
+import ru.binarysimple.order.model.saga.OrderSagaStatus;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.events.OrderCompensateEvent;
@@ -49,6 +50,7 @@ public class OrderSagaSkald {
 
         // Стартуем с первого этапа
         if (saga.getCurrentStep() == OrderSagaStep.PENDING) {
+            saga.setStatus(OrderSagaStatus.PROCESSING);
             saga.setCurrentStep(OrderSagaStep.BILLING);
         }
 
@@ -58,7 +60,11 @@ public class OrderSagaSkald {
             case DELIVERY -> deliveryStep(order, saga);
         }
 
-        notificationService.sendNotification(orderMapper.toOrderResultDto(order));
+        try {
+            notificationService.sendNotification(orderMapper.toOrderResultDto(order));
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
     }
 
     @KafkaListener(topics = "order.saga.compensate", groupId = "order-group")
@@ -74,12 +80,17 @@ public class OrderSagaSkald {
             case DELIVERY -> deliveryCompensateStep(order, saga);
         }
 
-        notificationService.sendNotification(orderMapper.toOrderResultDto(order));
+        try {
+            notificationService.sendNotification(orderMapper.toOrderResultDto(order));
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
     }
 
     @KafkaListener(topics = "warehouse.responses", groupId = "order-group") // Отдельная группа!
     public void handleStockReservationResponse(@Payload StockReservedEvent event) {
-        reserveStockStep.processStockResponse(event);
+//        reserveStockStep.processEvent(event);
+        processEventStep(reserveStockStep, event);
     }
 
     private void billingCompensateStep(Order order, OrderSaga saga) {
@@ -87,7 +98,7 @@ public class OrderSagaSkald {
         MakePaymentCommand paymentCmd = new MakePaymentCommand(orderMapper.toOrderResultDto(order), saga.getId());
         compensateStep(makePaymentStep, paymentCmd);
 
-        saga.setStatus("COMPENSATED");
+        saga.setStatus(OrderSagaStatus.COMPENSATED);
         saga.setCompensateStep(null);
         sagaRepository.save(saga);
     }
@@ -104,16 +115,13 @@ public class OrderSagaSkald {
     }
 
     private void billingStep(Order order, OrderSaga saga) {
-        // Первый шаг: оплата
-        saga.setStatus("PROCESSING");
-        saga.setCurrentStep(OrderSagaStep.BILLING);
-        sagaRepository.save(saga);
 
+        // Первый шаг: оплата
         // Создаем команду на оплату
         MakePaymentCommand paymentCmd = new MakePaymentCommand(orderMapper.toOrderResultDto(order), saga.getId());
 
         // Отправляем команду в шаг оплаты, который сохранит состояние и выполнит оплату синхронно
-        makePaymentStep.execute(paymentCmd);
+        executeStep(makePaymentStep, paymentCmd);
 
     }
 
@@ -121,7 +129,7 @@ public class OrderSagaSkald {
 
         ReserveStockCommand stockCmd = new ReserveStockCommand(orderMapper.toOrderResultDto(order), saga.getId());
 
-        reserveStockStep.execute(stockCmd);
+        executeStep(reserveStockStep, stockCmd);
 
     }
 
@@ -130,7 +138,7 @@ public class OrderSagaSkald {
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
 
-        saga.setStatus("COMPLETED");
+        saga.setStatus(OrderSagaStatus.COMPLETED);
         sagaRepository.save(saga);
 
         log.info("Saga completed successfully for Order {}", order.getId());
@@ -160,6 +168,26 @@ public class OrderSagaSkald {
             log.error("Compensation failed for step {}: {}", step.getClass().getSimpleName(), compensationResult.getFailureReason());
         } else {
             log.info("Compensation successful for step: {}", step.getClass().getSimpleName());
+        }
+    }
+
+    private <C> void executeStep(SagaStep<C, ?> step, C command) {
+        log.info("Executing step: {}", step.getClass().getSimpleName());
+        StepExecutionResult<?> executionResult = step.execute(command);
+        if (!executionResult.isSuccess()) {
+            log.error("Execution failed for step {}: {}", step.getClass().getSimpleName(), executionResult.getFailureReason());
+        } else {
+            log.info("Execution successful for step: {}", step.getClass().getSimpleName());
+        }
+    }
+
+    private <E> void processEventStep(SagaStep<?, E> step, E event) {
+        log.info("Processing event in step: {}", step.getClass().getSimpleName());
+        StepExecutionResult<?> processResult = step.processEvent(event);
+        if (!processResult.isSuccess()) {
+            log.error("Processing event failed for step {}: {}", step.getClass().getSimpleName(), processResult.getFailureReason());
+        } else {
+            log.info("Processing event successful for step: {}", step.getClass().getSimpleName());
         }
     }
 }

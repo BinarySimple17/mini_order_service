@@ -1,4 +1,4 @@
-package ru.binarysimple.order.model;
+package ru.binarysimple.order.model.saga;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,12 +18,18 @@ public class OrderSaga {
     private UUID id;
 
     private Long orderId;
+
     @Enumerated(EnumType.STRING)
     private OrderSagaStep currentStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
+
     @Enumerated(EnumType.STRING)
     private OrderSagaStep compensateStep; // e.g., "BILLING", "WAREHOUSE", "DELIVERY"
-    private String status;      // e.g., "PROCESSING", "COMPENSATING", "COMPLETED", "FAILED"
+
+    @Enumerated(EnumType.STRING)
+    private OrderSagaStatus status;      // e.g., "PROCESSING", "COMPENSATING", "COMPLETED", "FAILED", "WAITING"
+
     private LocalDateTime createdAt;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
