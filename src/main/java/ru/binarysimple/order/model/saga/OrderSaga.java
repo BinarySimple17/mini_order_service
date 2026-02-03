@@ -19,16 +19,21 @@ public class OrderSaga {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false)
     private UUID id;
+
     @Column(name = "order_id", nullable = false)
     private Long orderId;
-    @Enumerated(EnumType.STRING)
-    @Column(name = "current_step", nullable = false)
-    private SagaStep currentStep = SagaStep.PENDING;
+
+//    @Enumerated(EnumType.STRING)
+//    @Column(name = "current_step", nullable = false)
+//    private SagaStep currentStep = SagaStep.PENDING;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "state", nullable = false)
     private SagaState state = SagaState.STARTED;
+
     @Column(name = "payload", columnDefinition = "TEXT")
     private String payload;
+
     @CreationTimestamp
     @Column(
             name = "created_at",
@@ -36,6 +41,7 @@ public class OrderSaga {
             nullable = false,
             columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
+
     @UpdateTimestamp
     @Column(
             name = "updated_at",
@@ -43,36 +49,84 @@ public class OrderSaga {
             columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
-    public boolean isFailed() {
-        return this.state == SagaState.FAILED;
-    }
+    // Битовые флаги для шагов
+    private static final int PAYMENT_EXECUTED_BIT = 0;
+    private static final int WAREHOUSE_EXECUTED_BIT = 1;
+    private static final int DELIVERY_EXECUTED_BIT = 2;
 
-    public boolean isCurrentFinished() {
-        return (this.state == SagaState.COMPLETED || this.state == SagaState.COMPENSATED);
-    }
+    @Column(name = "step_flag")
+    private Integer stepFlag = 0;
 
-    public boolean isCompleted() {
-        return (this.currentStep == SagaStep.DELIVERY) && isCurrentFinished();
-    }
+//    public boolean isFailed() {
+//        return this.state == SagaState.FAILED;
+//    }
+//
+//    public boolean isCurrentFinished() {
+//        return (this.state == SagaState.COMPLETED || this.state == SagaState.COMPENSATED);
+//    }
+
+//    public boolean isCompleted() {
+//        return (this.currentStep == SagaStep.DELIVERY) && isCurrentFinished();
+//    }
 
     public enum SagaState {
         STARTED,
-        WAITING,
-        PROCESSING,
-        RESERVING,
-        RESERVED,
-        SCHEDULING,
-        SCHEDULED,
-        FAILED,
+        PAYMENT_PROCESSING,
+        PAYMENT_COMPLETED,
+        PAYMENT_FAILED,
+        WAREHOUSE_RESERVING,
+        WAREHOUSE_RESERVED,
+        WAREHOUSE_FAILED,
+        DELIVERY_SCHEDULING,
+        DELIVERY_SCHEDULED,
+        DELIVERY_FAILED,
         COMPLETED,
         COMPENSATING,
         COMPENSATED
     }
 
-    public enum SagaStep {
-        PENDING,
-        BILLING,
-        WAREHOUSE,
-        DELIVERY
+    // Методы для установки битов
+    public void setPaymentExecuted(boolean executed) {
+        if (executed) {
+            this.stepFlag |= (1 << PAYMENT_EXECUTED_BIT);
+        } else {
+            this.stepFlag &= ~(1 << PAYMENT_EXECUTED_BIT);
+        }
     }
+
+    public void setWarehouseExecuted(boolean executed) {
+        if (executed) {
+            this.stepFlag |= (1 << WAREHOUSE_EXECUTED_BIT);
+        } else {
+            this.stepFlag &= ~(1 << WAREHOUSE_EXECUTED_BIT);
+        }
+    }
+
+    public void setDeliveryExecuted(boolean executed) {
+        if (executed) {
+            this.stepFlag |= (1 << DELIVERY_EXECUTED_BIT);
+        } else {
+            this.stepFlag &= ~(1 << DELIVERY_EXECUTED_BIT);
+        }
+    }
+
+    // Методы для получения состояния битов
+    public boolean isPaymentExecuted() {
+        return (this.stepFlag & (1 << PAYMENT_EXECUTED_BIT)) != 0;
+    }
+
+    public boolean isWarehouseExecuted() {
+        return (this.stepFlag & (1 << WAREHOUSE_EXECUTED_BIT)) != 0;
+    }
+
+    public boolean isDeliveryExecuted() {
+        return (this.stepFlag & (1 << DELIVERY_EXECUTED_BIT)) != 0;
+    }
+
+//    public enum SagaStep {
+//        PENDING,
+//        BILLING,
+//        WAREHOUSE,
+//        DELIVERY
+//    }
 }

@@ -38,12 +38,12 @@ public class OrderController {
         if (!currentUsername.equals(dto.getUsername())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
-        return orderSagaManager.createOrder(dto);
+        return orderService.create(dto);
     }
 
     @DeleteMapping("/{id}")
     public OrderResultDto cancelOrder(@PathVariable Long id) {
-        orderSagaManager.cancelOrder(id);
+//        orderService.cancelOrder(id);
         return orderService.getOne(id);
     }
 

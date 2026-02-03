@@ -1,11 +1,12 @@
 package ru.binarysimple.order.saga;
 
 import org.springframework.stereotype.Component;
-import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
 
 @Component
 public interface OrderSagaManager {
-    OrderResultDto createOrder(OrderDto orderDto);
-    void cancelOrder(Long orderId);
+
+    void startNew(OrderResultDto order);
+
+//    void recover();
 }

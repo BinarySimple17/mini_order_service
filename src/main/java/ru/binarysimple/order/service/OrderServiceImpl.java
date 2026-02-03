@@ -21,7 +21,9 @@ import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderPosition;
 import ru.binarysimple.order.model.OrderStatus;
+import ru.binarysimple.order.model.saga.OrderSaga;
 import ru.binarysimple.order.repository.OrderRepository;
+import ru.binarysimple.order.saga.OrderSagaManager;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -39,15 +41,17 @@ public class OrderServiceImpl implements OrderService {
 
     private final ObjectMapper objectMapper;
 
+    private final OrderSagaManager orderSagaManager;
+
     private final BillingServiceClient billingServiceClient;
 
     private final ApplicationEventPublisher eventPublisher;
 
-    @Override
-    public Page<OrderResultDto> getAll(Pageable pageable) {
-        Page<Order> orders = orderRepository.findAll(pageable);
-        return orders.map(orderMapper::toOrderResultDto);
-    }
+//    @Override
+//    public Page<OrderResultDto> getAll(Pageable pageable) {
+//        Page<Order> orders = orderRepository.findAll(pageable);
+//        return orders.map(orderMapper::toOrderResultDto);
+//    }
 
     @Override
     public OrderResultDto getOne(Long id) {
@@ -76,65 +80,67 @@ public class OrderServiceImpl implements OrderService {
         // Устанавливаем связь между заказом и позициями
         order.getOrderPositions().forEach(position -> position.setOrder(order));
 
-        try {
-            OperationDto operation = billingServiceClient.makePayment(order);
-            order.setStatus(OrderStatus.PAID);
-        } catch (BillingServiceException billingServiceException){
-            order.setStatus(OrderStatus.INSUFFICIENT_FUNDS);
-        } catch (Exception e) {
-            order.setStatus(OrderStatus.FAILED);
-        }
+//        try {
+//            OperationDto operation = billingServiceClient.makePayment(order);
+//            order.setStatus(OrderStatus.PAID);
+//        } catch (BillingServiceException billingServiceException){
+//            order.setStatus(OrderStatus.INSUFFICIENT_FUNDS);
+//        } catch (Exception e) {
+//            order.setStatus(OrderStatus.FAILED);
+//        }
 
 
         Order resultOrder = orderRepository.save(order);
 
-        // публикуем событие - оно будет обработано ПОСЛЕ коммита
-        // в этом событии топравка сообщения в кафку
-        // только для transactional
-        eventPublisher.publishEvent(new OrderCreatedEvent(resultOrder, Class.class.getName()));
+        orderSagaManager.startNew(orderMapper.toOrderResultDto(order));
+
+//        // публикуем событие - оно будет обработано ПОСЛЕ коммита
+//        // в этом событии топравка сообщения в кафку
+//        // только для transactional
+//        eventPublisher.publishEvent(new OrderCreatedEvent(resultOrder, Class.class.getName()));
 
         return orderMapper.toOrderResultDto(resultOrder);
     }
 
-    @Override
-    public OrderResultDto patch(Long id, JsonNode patchNode) throws IOException {
-        Order order = orderRepository.findById(id).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Entity with id `%s` not found".formatted(id)));
-        
-        ObjectReader reader = objectMapper.readerForUpdating(order);
-        Order updated = reader.readValue(patchNode);
-
-        Order resultOrder = orderRepository.save(updated);
-        return orderMapper.toOrderResultDto(resultOrder);
-    }
-
-    @Override
-    public List<Long> patchMany(List<Long> ids, JsonNode patchNode) throws IOException {
-        Collection<Order> orders = orderRepository.findAllById(ids);
-
-        for (Order order : orders) {
-            OrderDto orderDto = orderMapper.toOrderDto(order);
-            objectMapper.readerForUpdating(orderDto).readValue(patchNode);
-            orderMapper.updateWithNull(orderDto, order);
-        }
-
-        List<Order> resultOrders = orderRepository.saveAll(orders);
-        return resultOrders.stream()
-                .map(Order::getId)
-                .toList();
-    }
-
-    @Override
-    public OrderResultDto delete(Long id) {
-        Order order = orderRepository.findById(id).orElse(null);
-        if (order != null) {
-            orderRepository.delete(order);
-        }
-        return orderMapper.toOrderResultDto(order);
-    }
-
-    @Override
-    public void deleteMany(List<Long> ids) {
-        orderRepository.deleteAllById(ids);
-    }
+//    @Override
+//    public OrderResultDto patch(Long id, JsonNode patchNode) throws IOException {
+//        Order order = orderRepository.findById(id).orElseThrow(() ->
+//                new ResponseStatusException(HttpStatus.NOT_FOUND, "Entity with id `%s` not found".formatted(id)));
+//
+//        ObjectReader reader = objectMapper.readerForUpdating(order);
+//        Order updated = reader.readValue(patchNode);
+//
+//        Order resultOrder = orderRepository.save(updated);
+//        return orderMapper.toOrderResultDto(resultOrder);
+//    }
+//
+//    @Override
+//    public List<Long> patchMany(List<Long> ids, JsonNode patchNode) throws IOException {
+//        Collection<Order> orders = orderRepository.findAllById(ids);
+//
+//        for (Order order : orders) {
+//            OrderDto orderDto = orderMapper.toOrderDto(order);
+//            objectMapper.readerForUpdating(orderDto).readValue(patchNode);
+//            orderMapper.updateWithNull(orderDto, order);
+//        }
+//
+//        List<Order> resultOrders = orderRepository.saveAll(orders);
+//        return resultOrders.stream()
+//                .map(Order::getId)
+//                .toList();
+//    }
+//
+//    @Override
+//    public OrderResultDto delete(Long id) {
+//        Order order = orderRepository.findById(id).orElse(null);
+//        if (order != null) {
+//            orderRepository.delete(order);
+//        }
+//        return orderMapper.toOrderResultDto(order);
+//    }
+//
+//    @Override
+//    public void deleteMany(List<Long> ids) {
+//        orderRepository.deleteAllById(ids);
+//    }
 }

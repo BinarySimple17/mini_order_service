@@ -18,6 +18,7 @@ import ru.binarysimple.order.repository.OutboxEventRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @RequiredArgsConstructor
 @Service
@@ -33,6 +34,7 @@ public class OutboxServiceImpl implements OutboxService {
     private int timeout;
 
     @Override
+//    @Transactional
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveEvent(EventType eventType, String parentId, ParentType parentType, Object payload, String topic) {
         try {
@@ -54,26 +56,36 @@ public class OutboxServiceImpl implements OutboxService {
 
     @Override
     @Scheduled(fixedDelayString = "${app.outbox.interval:6000}")
+//    @Transactional
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processOutbox() {
         List<OutboxEvent> events = outboxRepository.findUnpublishedEvents(retries);
         for (OutboxEvent event : events) {
             try {
-                CompletableFuture<?> future =
-                        kafkaTemplate.send(event.getTopic(), event.getParentId(), event.getPayload());
-                future.get(timeout, java.util.concurrent.TimeUnit.SECONDS);
+                kafkaTemplate.send(event.getTopic(), event.getParentId(), event.getPayload()).get();
                 event.setPublished(true);
                 event.setPublishedAt(LocalDateTime.now());
                 event.setErrorMessage(null);
                 outboxRepository.save(event);
-
-                log.info("Published event {} to topic {}", event.getEventType(), event.getTopic());
-            } catch (InterruptedException interruptedException) {
-                onError(event, interruptedException);
-                Thread.currentThread().interrupt();
             } catch (Exception e) {
-                onError(event, e);
+                log.error("Failed to relay outbox event: {}", event.getEventId(), e);
             }
+//            try {
+//                CompletableFuture<?> future =
+//                        kafkaTemplate.send(event.getTopic(), event.getParentId(), event.getPayload());
+//                future.get(timeout, java.util.concurrent.TimeUnit.SECONDS);
+//                event.setPublished(true);
+//                event.setPublishedAt(LocalDateTime.now());
+//                event.setErrorMessage(null);
+//                outboxRepository.save(event);
+//
+//                log.info("Published event {} to topic {}", event.getEventType(), event.getTopic());
+//            } catch (InterruptedException interruptedException) {
+//                onError(event, interruptedException);
+//                Thread.currentThread().interrupt();
+//            } catch (Exception e) {
+//                onError(event, e);
+//            }
         }
     }
 
