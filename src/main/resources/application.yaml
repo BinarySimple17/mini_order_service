@@ -92,6 +92,8 @@ app:
   kafka:
     topics:
       order-events: order.events
+  saga:
+    retry-max-count: 3
   outbox:
     retry-max-count: 3
     send-timeout-seconds: 5

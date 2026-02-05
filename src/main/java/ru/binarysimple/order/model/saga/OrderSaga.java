@@ -31,6 +31,8 @@ public class OrderSaga {
     private SagaState state = SagaState.STARTED;
     @Column(name = "payload", columnDefinition = "TEXT")
     private String payload;
+    @Column(name = "retry_count", nullable = false)
+    private Integer retryCount = 0;
     @CreationTimestamp
     @Column(
             name = "created_at",
@@ -101,20 +103,27 @@ public class OrderSaga {
         return stepFlag == 0;
     }
 
+    @Getter
     public enum SagaState {
-        STARTED,
-        PAYMENT_PROCESSING,
-        PAYMENT_COMPLETED,
-        PAYMENT_FAILED,
-        WAREHOUSE_RESERVING,
-        WAREHOUSE_RESERVED,
-        WAREHOUSE_FAILED,
-        DELIVERY_SCHEDULING,
-        DELIVERY_SCHEDULED,
-        DELIVERY_FAILED,
-        COMPLETED,
-        COMPENSATING,
-        COMPENSATED
+        STARTED("Started"),
+        PAYMENT_PROCESSING("Payment processing"),
+        PAYMENT_COMPLETED("Payment completed"),
+        PAYMENT_FAILED("Payment failed"),
+        WAREHOUSE_RESERVING("Warehouse stock reserving"),
+        WAREHOUSE_RESERVED("Warehouse stock reserved"),
+        WAREHOUSE_FAILED("Warehouse reserving failed"),
+        DELIVERY_SCHEDULING("Delivery scheduling"),
+        DELIVERY_SCHEDULED("Delivery scheduled"),
+        DELIVERY_FAILED("Delivery failed"),
+        COMPLETED("Completed"),
+        COMPENSATING("Compensating"),
+        COMPENSATED("Compensated");
+
+        private final String text;
+
+        SagaState(String text) {
+            this.text = text;
+        }
     }
 
 //    public enum SagaStep {

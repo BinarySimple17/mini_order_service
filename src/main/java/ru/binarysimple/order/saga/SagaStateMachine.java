@@ -92,7 +92,7 @@ public class SagaStateMachine {
         return getConfig(state).finalState();
     }
 
-    private long getTimeoutForState(OrderSaga.SagaState state) {
+    public long getTimeoutForState(OrderSaga.SagaState state) {
         return getConfig(state).timeoutMs();
     }
 
