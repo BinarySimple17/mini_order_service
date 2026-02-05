@@ -18,7 +18,7 @@ import ru.binarysimple.order.service.OrderService;
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderSagaManager orderSagaManager;
+//    private final OrderSagaManager orderSagaManager;
 //    private final OrderSagaManager orderSagaManager;
 
 //    public OrderController(OrderService orderService, OrderSagaManager orderSagaManager) {

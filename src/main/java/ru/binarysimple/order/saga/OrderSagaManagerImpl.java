@@ -8,18 +8,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import ru.binarysimple.order.client.BillingServiceClient;
 import ru.binarysimple.order.dto.OrderResultDto;
-import ru.binarysimple.order.exception.SagaException;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.saga.OrderSaga;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.events.SagaEvents;
 import ru.binarysimple.order.saga.processor.EventProcessor;
-import ru.binarysimple.order.saga.processor.ProcessorResult;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.UUID;
+import ru.binarysimple.order.saga.processor.PaymentCompensationResponseProcessor;
+import ru.binarysimple.order.saga.processor.PaymentResponseProcessor;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -32,6 +28,8 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
     private final ObjectMapper objectMapper;
     private final SagaStateMachine stateMachine;
     private final BillingServiceClient billingServiceClient;
+    private final PaymentResponseProcessor paymentResponseProcessor;
+    private final PaymentCompensationResponseProcessor paymentCompensationResponseProcessor;
 
     @Override
     @Transactional
@@ -59,46 +57,50 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
             groupId = "order-service")
     @Transactional
     public void handlePaymentResponse(String message) {
-        log.debug("Received from kafka");
-        log.debug(message);
-        log.debug("-------------------");
-        try {
-            SagaEvents.PaymentResponseEvent event = objectMapper.readValue(message, SagaEvents.PaymentResponseEvent.class);
-            log.debug("--------ok-----------");
-            log.debug(event.toString());
-            log.debug("-------------------");
-        } catch (Exception e) {
-            log.error("Failed to process {} response: {}", SagaEvents.PaymentResponseEvent.class, message, e);
-        }
-//        processMessage(message, PaymentResponseEvent.class, paymentResponseHandler::processPaymentResponse);
-    }
 
-    private <E> void processMessage(EventProcessor<E, ?> processor, E event) {
-        log.info("Processing event: {}", processor.getClass().getSimpleName());
+        log.debug("handlePaymentResponse from kafka {}", message);
+        processMessage2(paymentResponseProcessor, message, SagaEvents.PaymentResponseEvent.class);
 
-        ProcessorResult<?> processResult = processor.processEvent(event);
-    }
-
-//    private <T> void processMessage(String message, Class<T> eventClass, java.util.function.BiConsumer<T, OrderSaga> processor) {
 //        try {
-//            T event = objectMapper.readValue(message, eventClass);
-//            OrderSaga saga = getSaga(event);
-//            processor.accept(event, saga);
+//            SagaEvents.PaymentResponseEvent event = objectMapper.readValue(message, SagaEvents.PaymentResponseEvent.class);
+//            final String sagaId = event.getSagaId().toString();
+//            OrderSaga saga = sagaRepository.findById(event.getSagaId()).orElseThrow(() -> new RuntimeException("Saga not found for ID: " + sagaId));
+//
+//            processMessage(paymentResponseProcessor, event, saga);
+//
 //        } catch (Exception e) {
-//            log.error("Failed to process {} response: {}", eventClass.getSimpleName(), message, e);
+//            log.error("Failed to process response: {}", SagaEvents.PaymentResponseEvent.class, e);
 //        }
+    }
+
+    @KafkaListener(
+            id = "paymentListenerCompensation",
+            topics = "payment.response.compensation",
+            groupId = "order-service")
+    @Transactional
+    public void handlePaymentCompensationResponse(String message) {
+
+        log.debug("handlePaymentCompensationResponse from kafka {}", message);
+
+        processMessage2(paymentCompensationResponseProcessor, message, SagaEvents.OrderFailedEvent.class);
+    }
+
+//    private <E> void processMessage(EventProcessor<E> processor, E event, OrderSaga saga) {
+//        log.info("Processing event: {}", processor.getClass().getSimpleName());
+//
+//        processor.processEvent(event);
+////        processor.processEvent(event, saga);
 //    }
 
-    private OrderSaga getSaga(Object event) {
+    private <T> void processMessage2(EventProcessor<T> processor, String message, Class<T> eventClass) {
+        log.info("processMessage2 event: {}", processor.getClass().getSimpleName());
+
         try {
-            Method getSagaId = event.getClass().getMethod("getSagaId");
-            UUID sagaId = (UUID) getSagaId.invoke(event);
-            return sagaRepository.findById(sagaId).orElseThrow(() -> {
-                log.error("Saga not found: {}", sagaId);
-                return new RuntimeException("Saga not found: " + sagaId);
-            });
-        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            throw new SagaException(e.getMessage(), e);
+            T event = objectMapper.readValue(message, eventClass);
+            processor.processEvent(event);
+        } catch (Exception e) {
+            log.error("Failed to process response: {}", SagaEvents.PaymentResponseEvent.class, e);
         }
     }
+
 }

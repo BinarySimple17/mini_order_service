@@ -21,13 +21,15 @@ public class OutboxEvent {
     @Column(name = "parent_id", nullable = false)
     private String parentId; // id чье сообщение
 
-    @Column(name = "aggregate_type", nullable = false)
+    @Column(name = "parent_type", nullable = false)
+    @Enumerated(EnumType.STRING)
     private ParentType parentType; //чье сообщение
 
 //    @Column(name = "correlation_id")
 //    private String correlationId;
 
     @Column(name = "event_type", nullable = false)
+    @Enumerated(EnumType.STRING)
     private EventType eventType; //
 
     @Column(name = "payload", columnDefinition = "TEXT")

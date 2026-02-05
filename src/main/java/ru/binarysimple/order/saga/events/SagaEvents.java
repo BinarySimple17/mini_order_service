@@ -37,6 +37,41 @@ public class SagaEvents {
 
         private UUID sagaId;
 
+        private Boolean success;
+
+        private String message;
+
         OperationDto operation;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class WarehouseReservationRequestEvent {
+        private UUID sagaId;
+
+        private OrderResultDto order;
+
+        private LocalDateTime timestamp = LocalDateTime.now();
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class OrderFailedEvent {
+        private UUID sagaId;
+
+        private Long orderId;
+
+        private String username;
+
+        private String reason;
+
+        private LocalDateTime timestamp = LocalDateTime.now();
     }
 }

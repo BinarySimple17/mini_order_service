@@ -1,6 +1,9 @@
 package ru.binarysimple.order.saga.processor;
 
-public interface EventProcessor <Event, Result>{
+import ru.binarysimple.order.model.saga.OrderSaga;
 
-    ProcessorResult<Result> processEvent(Event event);
+public interface EventProcessor <Event>{
+
+    void processEvent(Event event);
+//    void processEvent(Event event, OrderSaga saga);
 }
