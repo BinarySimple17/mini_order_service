@@ -94,6 +94,7 @@ app:
       order-events: order.events
   saga:
     retry-max-count: 3
+    recover-interval: 300000
   outbox:
     retry-max-count: 3
     send-timeout-seconds: 5

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import ru.binarysimple.order.client.BillingServiceClient;
@@ -24,6 +25,7 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
 
     private final OrderRepository orderRepository;
     private final OrderSagaRepository sagaRepository;
+    private final  SagaRecoveryService sagaRecoveryService;
     private final OrderMapper orderMapper;
     private final ObjectMapper objectMapper;
     private final SagaStateMachine stateMachine;
@@ -61,16 +63,6 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
         log.debug("handlePaymentResponse from kafka {}", message);
         processMessage2(paymentResponseProcessor, message, SagaEvents.PaymentResponseEvent.class);
 
-//        try {
-//            SagaEvents.PaymentResponseEvent event = objectMapper.readValue(message, SagaEvents.PaymentResponseEvent.class);
-//            final String sagaId = event.getSagaId().toString();
-//            OrderSaga saga = sagaRepository.findById(event.getSagaId()).orElseThrow(() -> new RuntimeException("Saga not found for ID: " + sagaId));
-//
-//            processMessage(paymentResponseProcessor, event, saga);
-//
-//        } catch (Exception e) {
-//            log.error("Failed to process response: {}", SagaEvents.PaymentResponseEvent.class, e);
-//        }
     }
 
     @KafkaListener(
@@ -85,13 +77,6 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
         processMessage2(paymentCompensationResponseProcessor, message, SagaEvents.OrderFailedEvent.class);
     }
 
-//    private <E> void processMessage(EventProcessor<E> processor, E event, OrderSaga saga) {
-//        log.info("Processing event: {}", processor.getClass().getSimpleName());
-//
-//        processor.processEvent(event);
-////        processor.processEvent(event, saga);
-//    }
-
     private <T> void processMessage2(EventProcessor<T> processor, String message, Class<T> eventClass) {
         log.info("processMessage2 event: {}", processor.getClass().getSimpleName());
 
@@ -101,6 +86,14 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
         } catch (Exception e) {
             log.error("Failed to process response: {}", SagaEvents.PaymentResponseEvent.class, e);
         }
+    }
+
+    @Scheduled(fixedDelayString = "${app.saga.recover-interval: 180000}")
+    @Transactional
+    @Override
+    public void recoverStuckSagas() {
+        sagaRecoveryService.recoverStuckSagas(stateMachine);
+        sagaRecoveryService.compensateFailedSagas(stateMachine);
     }
 
 }

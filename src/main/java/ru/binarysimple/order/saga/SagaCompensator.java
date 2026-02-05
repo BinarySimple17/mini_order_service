@@ -5,9 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.binarysimple.order.dto.OrderResultDto;
 import ru.binarysimple.order.model.EventType;
-import ru.binarysimple.order.model.ParentType;
 import ru.binarysimple.order.model.saga.OrderSaga;
-import ru.binarysimple.order.saga.events.SagaEvents;
 import ru.binarysimple.order.service.OutboxService;
 
 @Component
@@ -40,6 +38,7 @@ public class SagaCompensator {
         if (saga.isDeliveryExecuted()) {
             sendDeliveryCompensate(saga, order, reason);
         }
+
     }
 
     private void sendPaymentCompensate(OrderSaga saga, OrderResultDto order, String reason) {
@@ -81,7 +80,7 @@ public class SagaCompensator {
         setSagaCompensated(saga);
     }
 
-    private void setSagaCompensated(OrderSaga saga){
+    private void setSagaCompensated(OrderSaga saga) {
         if (saga.isFullyCompensated()) {
             saga.setState(OrderSaga.SagaState.COMPENSATED);
         }

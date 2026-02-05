@@ -13,6 +13,7 @@ public enum OrderStatus {
     PAID("Paid"),
     DONE("Done"),
     CANCELED("Canceled"),
+    COMPENSATED("Compensated"),
     RESERVING_PAYMENT("Reserving payment");
 
     private final String title;

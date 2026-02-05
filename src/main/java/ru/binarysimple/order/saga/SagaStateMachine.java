@@ -96,9 +96,10 @@ public class SagaStateMachine {
         return getConfig(state).timeoutMs();
     }
 
-//    public OrderSaga.SagaState getNextState(OrderSaga.SagaState currentState) {
-//        return transitions.get(currentState);
-//    }
+    @Transactional
+    public void retryStep(OrderSaga saga, OrderResultDto order) {
+        executeStep(saga, order, saga.getState());
+    }
 
     private record StateConfig(boolean finalState, long timeoutMs, boolean autoTransition) {
     }
