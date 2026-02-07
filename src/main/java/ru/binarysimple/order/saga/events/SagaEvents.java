@@ -37,6 +37,8 @@ public class SagaEvents {
 
         private UUID sagaId;
 
+        private final UUID eventId = UUID.randomUUID();
+
         private Boolean success;
 
         private String message;
@@ -52,9 +54,27 @@ public class SagaEvents {
     public static class WarehouseReservationRequestEvent {
         private UUID sagaId;
 
+        private final UUID eventId = UUID.randomUUID();
+
         private OrderResultDto order;
 
         private LocalDateTime timestamp = LocalDateTime.now();
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class WarehouseReservationResponseEvent {
+
+        private UUID eventId;
+        private UUID sagaId;
+        private Boolean success;
+        private String message;
+        private OrderResultDto order;
+        private LocalDateTime timestamp;
 
     }
 
@@ -67,6 +87,8 @@ public class SagaEvents {
         private UUID sagaId;
 
         private Long orderId;
+
+        private final UUID eventId = UUID.randomUUID();
 
         private String username;
 

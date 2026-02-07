@@ -11,6 +11,7 @@ public enum OrderStatus {
     FAILED("Failed"),
     IN_PROGRESS("In progress"),
     PAID("Paid"),
+    WAREHOUSE_RESERVED("Warehouse reserved"),
     DONE("Done"),
     CANCELED("Canceled"),
     COMPENSATED("Compensated"),

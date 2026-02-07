@@ -48,7 +48,7 @@ public class WarehouseStep implements SagaStep {
                 saga.getId().toString(),
                 ParentType.SAGA,
                 event,
-                "warehouse.request");
+                "warehouse.reserve.request");
 
         log.info("Warehouse reserve requested for order {} via saga {}", order.getId(), saga.getId());
     }

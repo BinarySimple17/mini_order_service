@@ -17,6 +17,7 @@ import ru.binarysimple.order.saga.events.SagaEvents;
 import ru.binarysimple.order.saga.processor.EventProcessor;
 import ru.binarysimple.order.saga.processor.PaymentCompensationResponseProcessor;
 import ru.binarysimple.order.saga.processor.PaymentResponseProcessor;
+import ru.binarysimple.order.saga.processor.WarehouseResponseProcessor;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -32,6 +33,7 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
     private final BillingServiceClient billingServiceClient;
     private final PaymentResponseProcessor paymentResponseProcessor;
     private final PaymentCompensationResponseProcessor paymentCompensationResponseProcessor;
+    private final WarehouseResponseProcessor warehouseResponseProcessor;
 
     @Override
     @Transactional
@@ -75,6 +77,19 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
         log.debug("handlePaymentCompensationResponse from kafka {}", message);
 
         processMessage2(paymentCompensationResponseProcessor, message, SagaEvents.OrderFailedEvent.class);
+    }
+
+    //todo warehouse.reserve.response
+    @KafkaListener(
+            id = "warehouseResponseListener",
+            topics = "warehouse.reserve.response",
+            groupId = "order-service")
+    @Transactional
+    public void handleWarehouseReserveResponse(String message) {
+
+        log.debug("handleWarehouseReserveResponse from kafka {}", message);
+
+        processMessage2(warehouseResponseProcessor, message, SagaEvents.WarehouseReservationResponseEvent.class);
     }
 
     private <T> void processMessage2(EventProcessor<T> processor, String message, Class<T> eventClass) {
