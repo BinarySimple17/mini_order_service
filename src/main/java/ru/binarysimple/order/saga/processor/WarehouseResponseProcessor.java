@@ -37,7 +37,7 @@ public class WarehouseResponseProcessor implements EventProcessor<SagaEvents.War
                     .orElseThrow(() -> new RuntimeException("Order not found: " + saga.getOrderId()));
             order.setStatus(WAREHOUSE_RESERVED);
             orderRepository.save(order);
-            saga.setPaymentExecuted(true);
+            saga.setWarehouseExecuted(true);
             saga.setState(OrderSaga.SagaState.WAREHOUSE_RESERVED);
             sagaRepository.save(saga);
 
@@ -45,7 +45,7 @@ public class WarehouseResponseProcessor implements EventProcessor<SagaEvents.War
             sagaRepository.save(saga);
             log.info("Warehouser reserving successful, saga {} moved to delivery", saga.getId());
         } else {
-            saga.setPaymentExecuted(false);
+            saga.setWarehouseExecuted(false);
             saga.setState(OrderSaga.SagaState.WAREHOUSE_FAILED);
 //            saga.setErrorMessage("Payment failed: " + event.getMessage());
             sagaRepository.save(saga);

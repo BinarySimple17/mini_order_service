@@ -14,10 +14,7 @@ import ru.binarysimple.order.model.saga.OrderSaga;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.events.SagaEvents;
-import ru.binarysimple.order.saga.processor.EventProcessor;
-import ru.binarysimple.order.saga.processor.PaymentCompensationResponseProcessor;
-import ru.binarysimple.order.saga.processor.PaymentResponseProcessor;
-import ru.binarysimple.order.saga.processor.WarehouseResponseProcessor;
+import ru.binarysimple.order.saga.processor.*;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -34,6 +31,7 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
     private final PaymentResponseProcessor paymentResponseProcessor;
     private final PaymentCompensationResponseProcessor paymentCompensationResponseProcessor;
     private final WarehouseResponseProcessor warehouseResponseProcessor;
+    private final WarehouseCompensationResponseProcessor warehouseCompensationResponseProcessor;
 
     @Override
     @Transactional
@@ -55,6 +53,12 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
         return sagaRepository.save(saga);
     }
 
+    /**
+     * Обрабатывает ответ от сервиса оплаты.
+     * Этот метод вызывается при получении сообщения из топика Kafka "payment.response".
+     *
+     * @param message сообщение в формате JSON, содержащее результат обработки оплаты
+     */
     @KafkaListener(
             id = "paymentListener",
             topics = "payment.response",
@@ -67,6 +71,12 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
 
     }
 
+    /**
+     * Обрабатывает ответ компенсации от сервиса оплаты.
+     * Этот метод вызывается при получении сообщения из топика Kafka "payment.response.compensation".
+     *
+     * @param message сообщение в формате JSON, содержащее результат компенсационной транзакции
+     */
     @KafkaListener(
             id = "paymentListenerCompensation",
             topics = "payment.response.compensation",
@@ -79,7 +89,13 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
         processMessage2(paymentCompensationResponseProcessor, message, SagaEvents.OrderFailedEvent.class);
     }
 
-    //todo warehouse.reserve.response
+    
+    /**
+     * Обрабатывает ответ от складского сервиса по резервированию товаров.
+     * Этот метод вызывается при получении сообщения из топика Kafka "warehouse.reserve.response".
+     *
+     * @param message сообщение в формате JSON, содержащее результат резервирования товаров на складе
+     */
     @KafkaListener(
             id = "warehouseResponseListener",
             topics = "warehouse.reserve.response",
@@ -90,6 +106,24 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
         log.debug("handleWarehouseReserveResponse from kafka {}", message);
 
         processMessage2(warehouseResponseProcessor, message, SagaEvents.WarehouseReservationResponseEvent.class);
+    }
+
+    /**
+     * Обрабатывает ответ компенсации от сервиса по резервированию товаров.
+     * Этот метод вызывается при получении сообщения из топика Kafka "warehouse.compensate.response".
+     *
+     * @param message сообщение в формате JSON, содержащее результат компенсационной транзакции
+     */
+    @KafkaListener(
+            id = "warehouseListenerCompensation",
+            topics = "warehouse.compensate.response",
+            groupId = "order-service")
+    @Transactional
+    public void handleWarehouseCompensationResponse(String message) {
+
+        log.debug("handleWarehouseCompensationResponse from kafka {}", message);
+
+        processMessage2(warehouseCompensationResponseProcessor, message, SagaEvents.OrderFailedEvent.class);
     }
 
     private <T> void processMessage2(EventProcessor<T> processor, String message, Class<T> eventClass) {
