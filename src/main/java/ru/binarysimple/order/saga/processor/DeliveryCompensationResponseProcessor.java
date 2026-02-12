@@ -18,7 +18,7 @@ import static ru.binarysimple.order.model.OrderStatus.CANCELED;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class WarehouseCompensationResponseProcessor implements EventProcessor<SagaEvents.WarehouseCompensationResponseEvent> {
+public class DeliveryCompensationResponseProcessor implements EventProcessor<SagaEvents.DeliveryCompensationResponseEvent> {
 
     private final SagaCompensator sagaCompensator;
 
@@ -29,21 +29,23 @@ public class WarehouseCompensationResponseProcessor implements EventProcessor<Sa
     private final OrderMapper orderMapper;
 
     @Override
-    public void processEvent(SagaEvents.WarehouseCompensationResponseEvent event) {
+    public void processEvent(SagaEvents.DeliveryCompensationResponseEvent event) {
 
         OrderSaga saga = sagaRepository.findById(event.getSagaId()).orElseThrow(() ->
-                new RuntimeException("WarehouseCompensationResponseProcessor saga not found " + event.getSagaId()));
+                new RuntimeException("DeliveryCompensationResponseProcessor saga not found " + event.getSagaId()));
 
 
         Order order = orderRepository
                 .findById(saga.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found: " + saga.getOrderId()));
-        sagaCompensator.compensateWarehouse(saga, orderMapper.toOrderResultDto(order));
+
+        sagaCompensator.compensateDelivery(saga, orderMapper.toOrderResultDto(order));
         sagaRepository.save(saga);
+
         if (saga.getState() == OrderSaga.SagaState.COMPENSATED) {
             setOrderStatus(order, CANCELED);
         }
-        log.info("Warehouse compensation successful, saga {} moved to {}", saga.getId(), saga.getState());
+        log.info("Delivery compensation successful, saga {} moved to {}", saga.getId(), saga.getState());
     }
 
     private void setOrderStatus(Order order, OrderStatus status) {

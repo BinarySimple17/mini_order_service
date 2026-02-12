@@ -15,15 +15,13 @@ public class SagaCompensator {
 
     private final OutboxService outboxService;
 
-//    private final KafkaTopicProperties kafkaTopicProperties;
-
     private final SagaStateMachine sagaStateMachine;
 
     public void executeCompensation(OrderSaga saga, OrderResultDto order, String reason) {
         log.info("Executing compensation for saga {}: {}", saga.getId(), reason);
 
         if (saga.isFullyCompensated()) {
-            saga.setState(OrderSaga.SagaState.COMPENSATED);
+            finalCompensated(saga, order);
             return;
         }
 
@@ -50,39 +48,39 @@ public class SagaCompensator {
     }
 
     private void sendDeliveryCompensate(OrderSaga saga, OrderResultDto order, String reason) {
-//        SagaEvents.OrderFailedEvent failedEvent = SagaEvents.OrderFailedEvent.builder()
-//                .sagaId(saga.getId())
-//                .orderId(order.getId())
-//                .userId(order.getUsername())
-//                .reason(reason)
-//                .build();
-//
-//        outboxService.saveEvent(
-//                EventType.DELIVERY_CANCELLED,
-//                order.getId().toString(),
-//                ParentType.SAGA,
-//                failedEvent,
-//                "delivery.request.compensation");
+        sagaStateMachine.compensate(saga, order, reason, EventType.DELIVERY_CANCELLED);
     }
 
-    public void compensatePayment(OrderSaga saga) {
+    public void compensatePayment(OrderSaga saga, OrderResultDto order) {
         saga.setPaymentExecuted(false);
-        setSagaCompensated(saga);
+        setSagaCompensated(saga, order);
     }
 
-    public void compensateWarehouse(OrderSaga saga) {
+    public void compensateWarehouse(OrderSaga saga, OrderResultDto order) {
         saga.setWarehouseExecuted(false);
-        setSagaCompensated(saga);
+        setSagaCompensated(saga, order);
     }
 
-    public void compensateDelivery(OrderSaga saga) {
+    public void compensateDelivery(OrderSaga saga, OrderResultDto order) {
         saga.setDeliveryExecuted(false);
-        setSagaCompensated(saga);
+        setSagaCompensated(saga, order);
     }
 
-    private void setSagaCompensated(OrderSaga saga) {
+    private void setSagaCompensated(OrderSaga saga, OrderResultDto order) {
         if (saga.isFullyCompensated()) {
+            finalCompensated(saga, order);
+        }
+    }
+
+    private void finalCompensated(OrderSaga saga, OrderResultDto order) {
+        log.info("Sending full compensation for saga {}", saga.getId());
+
+        try {
+            String compensationReason = "Fully compensated";
+            sagaStateMachine.compensate(saga, order, compensationReason, EventType.FINAL_COMPENSATION);
             saga.setState(OrderSaga.SagaState.COMPENSATED);
+        } catch (Exception e) {
+            log.error("FULLY Compensation failed for saga {}: {}", saga.getId(), e.getMessage());
         }
     }
 }

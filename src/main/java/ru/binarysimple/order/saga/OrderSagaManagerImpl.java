@@ -23,7 +23,7 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
 
     private final OrderRepository orderRepository;
     private final OrderSagaRepository sagaRepository;
-    private final  SagaRecoveryService sagaRecoveryService;
+    private final SagaRecoveryService sagaRecoveryService;
     private final OrderMapper orderMapper;
     private final ObjectMapper objectMapper;
     private final SagaStateMachine stateMachine;
@@ -32,6 +32,11 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
     private final PaymentCompensationResponseProcessor paymentCompensationResponseProcessor;
     private final WarehouseResponseProcessor warehouseResponseProcessor;
     private final WarehouseCompensationResponseProcessor warehouseCompensationResponseProcessor;
+
+    private final DeliveryResponseProcessor deliveryResponseProcessor;
+    private final WarehouseCompensationResponseProcessor getWarehouseCompensationResponseProcessor;
+
+    private final DeliveryCompensationResponseProcessor deliveryCompensationResponseProcessor;
 
     @Override
     @Transactional
@@ -89,7 +94,7 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
         processMessage2(paymentCompensationResponseProcessor, message, SagaEvents.OrderFailedEvent.class);
     }
 
-    
+
     /**
      * Обрабатывает ответ от складского сервиса по резервированию товаров.
      * Этот метод вызывается при получении сообщения из топика Kafka "warehouse.reserve.response".
@@ -123,7 +128,33 @@ public class OrderSagaManagerImpl implements OrderSagaManager {
 
         log.debug("handleWarehouseCompensationResponse from kafka {}", message);
 
-        processMessage2(warehouseCompensationResponseProcessor, message, SagaEvents.OrderFailedEvent.class);
+        processMessage2(warehouseCompensationResponseProcessor, message, SagaEvents.WarehouseCompensationResponseEvent.class);
+    }
+
+
+    @KafkaListener(
+            id = "deliveryListener",
+            topics = "delivery.reserve.response",
+            groupId = "order-service")
+    @Transactional
+    public void handleDeliveryResponse(String message) {
+
+        log.debug("handleDeliveryResponse from kafka {}", message);
+        processMessage2(deliveryResponseProcessor, message, SagaEvents.DeliveryResponseEvent.class);
+
+    }
+
+
+    @KafkaListener(
+            id = "deliveryListenerCompensation",
+            topics = "delivery.compensate.response",
+            groupId = "order-service")
+    @Transactional
+    public void handleDeliveryCompensationResponse(String message) {
+
+        log.debug("handleDeliveryCompensationResponse from kafka {}", message);
+
+        processMessage2(deliveryCompensationResponseProcessor, message, SagaEvents.DeliveryCompensationResponseEvent.class);
     }
 
     private <T> void processMessage2(EventProcessor<T> processor, String message, Class<T> eventClass) {

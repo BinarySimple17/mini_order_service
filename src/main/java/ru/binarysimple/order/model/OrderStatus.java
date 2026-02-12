@@ -7,6 +7,7 @@ import lombok.ToString;
 public enum OrderStatus {
     NEW("New"),
     DELIVERY_FAILED("Delivery failed"),
+    DELIVERY_RESERVED("Delivery reserved"),
     INSUFFICIENT_FUNDS("Insufficient funds"),
     FAILED("Failed"),
     IN_PROGRESS("In progress"),

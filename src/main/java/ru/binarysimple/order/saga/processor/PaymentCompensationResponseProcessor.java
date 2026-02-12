@@ -3,6 +3,7 @@ package ru.binarysimple.order.saga.processor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.model.saga.OrderSaga;
@@ -25,6 +26,8 @@ public class PaymentCompensationResponseProcessor implements EventProcessor<Saga
 
     private final OrderSagaRepository sagaRepository;
 
+    private final OrderMapper orderMapper;
+
     @Override
     public void processEvent(SagaEvents.OrderFailedEvent event) {
 
@@ -35,7 +38,7 @@ public class PaymentCompensationResponseProcessor implements EventProcessor<Saga
         Order order = orderRepository
                 .findById(saga.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found: " + saga.getOrderId()));
-        sagaCompensator.compensatePayment(saga);
+        sagaCompensator.compensatePayment(saga, orderMapper.toOrderResultDto(order));
         sagaRepository.save(saga);
         if (saga.getState() == OrderSaga.SagaState.COMPENSATED) {
             setOrderStatus(order, CANCELED);

@@ -15,19 +15,6 @@ import java.util.UUID;
 
 public class SagaEvents {
 
-//    @Data
-//    @Builder
-//    @NoArgsConstructor
-//    @AllArgsConstructor
-//    @JsonInclude(JsonInclude.Include.NON_NULL)
-//    public static class PaymentRequestEvent {
-//        private UUID sagaId;
-//
-//        OrderResultDto order;
-//
-//        private LocalDateTime timestamp = LocalDateTime.now();
-//    }
-
     @Data
     @Builder
     @NoArgsConstructor
@@ -72,6 +59,86 @@ public class SagaEvents {
         private UUID eventId;
         private UUID sagaId;
         private Boolean success;
+        private String message;
+        private OrderResultDto order;
+        private LocalDateTime timestamp;
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class WarehouseCompensationRequestEvent {
+        private UUID sagaId;
+
+        private final UUID eventId = UUID.randomUUID();
+
+        private OrderResultDto order;
+
+        private LocalDateTime timestamp = LocalDateTime.now();
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class WarehouseCompensationResponseEvent {
+
+        private UUID eventId;
+        private UUID sagaId;
+        private Boolean success;
+        private String message;
+        private OrderResultDto order;
+        private LocalDateTime timestamp;
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DeliveryRequestEvent {
+        private UUID sagaId;
+
+        private final UUID eventId = UUID.randomUUID();
+
+        private OrderResultDto order;
+
+        private LocalDateTime timestamp = LocalDateTime.now();
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DeliveryResponseEvent {
+
+        private UUID eventId;
+        private UUID sagaId;
+        private Boolean success;
+        private String message;
+        private OrderResultDto order;
+        private LocalDateTime timestamp;
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class DeliveryCompensationResponseEvent {
+
+        private UUID eventId;
+        private UUID sagaId;
+        private Boolean success = true;
         private String message;
         private OrderResultDto order;
         private LocalDateTime timestamp;

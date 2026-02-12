@@ -91,7 +91,7 @@ info:
 app:
   kafka:
     topics:
-      order-events: order.events
+      order-events: notification.events.order
   saga:
     retry-max-count: 3
     recover-interval: 300000

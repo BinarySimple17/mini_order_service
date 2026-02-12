@@ -20,7 +20,7 @@ public class OrderEvent {
 
     private String status;
 
-    private NotificationContact contact;
+//    private NotificationContact contact;
 
     private NotificationType notificationType;
 

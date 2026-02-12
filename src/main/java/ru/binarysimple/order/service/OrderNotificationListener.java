@@ -20,8 +20,8 @@ public class OrderNotificationListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleOrderCreatedEvent(OrderCreatedEvent event) {
 
-        log.debug("Processing notification for order {}", event.getOrder().getId());
+//        log.debug("Processing notification for order {}", event.getOrder().getId());
 
-        notificationService.sendNotification(event.getOrder());
+//        notificationService.sendNotification(event.getOrder());
     }
 }

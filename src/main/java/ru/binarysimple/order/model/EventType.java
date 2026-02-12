@@ -1,6 +1,10 @@
 package ru.binarysimple.order.model;
 
 public enum EventType {
+
+    FINAL_COMPENSATION,
+    FINAL_NOTIFICATION,
+
     ORDER_CREATED,
     ORDER_CANCELLING,
     ORDER_CANCELED,

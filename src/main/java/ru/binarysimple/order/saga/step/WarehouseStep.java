@@ -13,6 +13,7 @@ import ru.binarysimple.order.model.EventType;
 import ru.binarysimple.order.model.ParentType;
 import ru.binarysimple.order.model.saga.OrderSaga;
 import ru.binarysimple.order.saga.events.SagaEvents;
+import ru.binarysimple.order.service.NotificationService;
 import ru.binarysimple.order.service.OutboxService;
 
 import static ru.binarysimple.order.model.saga.OrderSaga.SagaState.PAYMENT_COMPLETED;
@@ -27,6 +28,9 @@ public class WarehouseStep implements SagaStep {
     private static final OrderSaga.SagaState STEP_SAGA_STATE = OrderSaga.SagaState.WAREHOUSE_RESERVING;
     private final OutboxService outboxService;
     private static final EventType COMPENSATE_EVENT_TYPE = EventType.WAREHOUSE_CANCELED;
+
+    private final NotificationService notificationService;
+
 //    private final BillingServiceClient billingClient;
 //    private final KafkaTemplate<String, Object> kafkaTemplate;
 //    private final ObjectMapper objectMapper;
@@ -51,11 +55,26 @@ public class WarehouseStep implements SagaStep {
                 "warehouse.reserve.request");
 
         log.info("Warehouse reserve requested for order {} via saga {}", order.getId(), saga.getId());
+
+        notificationService.sendNotification(saga,order, EVENT_TYPE);
     }
 
     @Override
     public void compensate(OrderSaga saga, OrderResultDto order, String reason) {
 
+        SagaEvents.WarehouseCompensationRequestEvent failedEvent = SagaEvents.WarehouseCompensationRequestEvent.builder()
+                .sagaId(saga.getId())
+                .order(order)
+                .build();
+
+        outboxService.saveEvent(
+                COMPENSATE_EVENT_TYPE,
+                order.getId().toString(),
+                ParentType.SAGA,
+                failedEvent,
+                "warehouse.compensate.request");
+
+        notificationService.sendNotification(saga,order, COMPENSATE_EVENT_TYPE);
     }
 
     @Override
