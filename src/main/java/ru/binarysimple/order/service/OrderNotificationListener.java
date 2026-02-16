@@ -7,8 +7,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import ru.binarysimple.order.mapper.OrderMapper;
-import ru.binarysimple.order.saga.events.OrderCreatedEvent;
+import ru.binarysimple.order.event.OrderCreatedEvent;
 
 @Slf4j
 @Service
