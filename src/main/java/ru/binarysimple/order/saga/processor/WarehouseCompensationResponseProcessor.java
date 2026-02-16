@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.binarysimple.order.mapper.OrderMapper;
+import ru.binarysimple.order.model.EventType;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.OrderStatus;
 import ru.binarysimple.order.model.saga.OrderSaga;
@@ -11,6 +12,7 @@ import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.SagaCompensator;
 import ru.binarysimple.order.saga.events.SagaEvents;
+import ru.binarysimple.order.service.NotificationService;
 
 import static ru.binarysimple.order.model.OrderStatus.CANCELED;
 
@@ -28,6 +30,8 @@ public class WarehouseCompensationResponseProcessor implements EventProcessor<Sa
 
     private final OrderMapper orderMapper;
 
+    private final NotificationService notificationService;
+
     @Override
     public void processEvent(SagaEvents.WarehouseCompensationResponseEvent event) {
 
@@ -44,6 +48,7 @@ public class WarehouseCompensationResponseProcessor implements EventProcessor<Sa
             setOrderStatus(order, CANCELED);
         }
         log.info("Warehouse compensation successful, saga {} moved to {}", saga.getId(), saga.getState());
+        notificationService.sendNotification(saga, event.getOrder(), EventType.WAREHOUSE_COMPENSATION_COMPLETED);
     }
 
     private void setOrderStatus(Order order, OrderStatus status) {

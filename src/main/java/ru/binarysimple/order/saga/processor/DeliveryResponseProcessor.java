@@ -34,11 +34,11 @@ public class DeliveryResponseProcessor implements EventProcessor<SagaEvents.Deli
     public void processEvent(SagaEvents.DeliveryResponseEvent event) {
 
         OrderSaga saga = sagaRepository.findById(event.getSagaId()).orElseThrow(() -> new RuntimeException("Saga not found for ID: " + event.getSagaId()));
+        Order order = orderRepository
+                .findById(saga.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found: " + saga.getOrderId()));
 
         if (event.getSuccess()) {
-            Order order = orderRepository
-                    .findById(saga.getOrderId())
-                    .orElseThrow(() -> new RuntimeException("Order not found: " + saga.getOrderId()));
             order.setStatus(DELIVERY_RESERVED);
             orderRepository.save(order);
             saga.setDeliveryExecuted(true);
@@ -56,6 +56,7 @@ public class DeliveryResponseProcessor implements EventProcessor<SagaEvents.Deli
             saga.setState(OrderSaga.SagaState.DELIVERY_FAILED);
 //            saga.setErrorMessage("Payment failed: " + event.getMessage());
             sagaRepository.save(saga);
+            notificationService.sendNotification(saga, orderMapper.toOrderResultDto(order), EventType.DELIVERY_FAILED);
         }
     }
 }

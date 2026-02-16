@@ -4,19 +4,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.binarysimple.order.mapper.OrderMapper;
+import ru.binarysimple.order.model.EventType;
 import ru.binarysimple.order.model.Order;
 import ru.binarysimple.order.model.saga.OrderSaga;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.repository.OrderSagaRepository;
 import ru.binarysimple.order.saga.SagaStateMachine;
 import ru.binarysimple.order.saga.events.SagaEvents;
+import ru.binarysimple.order.service.NotificationService;
 
-import static ru.binarysimple.order.model.OrderStatus.*;
+import static ru.binarysimple.order.model.OrderStatus.WAREHOUSE_RESERVED;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class WarehouseResponseProcessor implements EventProcessor<SagaEvents.WarehouseReservationResponseEvent>{
+public class WarehouseResponseProcessor implements EventProcessor<SagaEvents.WarehouseReservationResponseEvent> {
 
     private final OrderSagaRepository sagaRepository;
 
@@ -25,6 +27,8 @@ public class WarehouseResponseProcessor implements EventProcessor<SagaEvents.War
     private final SagaStateMachine stateMachine;
 
     private final OrderMapper orderMapper;
+
+    private final NotificationService notificationService;
 
     @Override
     public void processEvent(SagaEvents.WarehouseReservationResponseEvent event) {
@@ -44,11 +48,14 @@ public class WarehouseResponseProcessor implements EventProcessor<SagaEvents.War
             stateMachine.process(saga, orderMapper.toOrderResultDto(order));
             sagaRepository.save(saga);
             log.info("Warehouser reserving successful, saga {} moved to delivery", saga.getId());
+            notificationService.sendNotification(saga, event.getOrder(), EventType.WAREHOUSE_RESERVED);
         } else {
             saga.setWarehouseExecuted(false);
             saga.setState(OrderSaga.SagaState.WAREHOUSE_FAILED);
-//            saga.setErrorMessage("Payment failed: " + event.getMessage());
             sagaRepository.save(saga);
+            notificationService.sendNotification(saga, event.getOrder(), EventType.WAREHOUSE_RESERVATION_FAILED);
         }
+
+
     }
 }
