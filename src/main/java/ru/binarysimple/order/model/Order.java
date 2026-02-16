@@ -27,13 +27,13 @@ public class Order {
     private String username;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+//    @OrderBy
     private List<OrderPosition> orderPositions = new ArrayList<>();
 
     @Column(name = "total_cost", precision = 19, scale = 2, nullable = false)
     private BigDecimal totalCost;
 
     @Column(name = "created_at")
-//    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
     @Column(name = "shop_id", nullable = false)

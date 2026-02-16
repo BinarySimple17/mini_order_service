@@ -7,10 +7,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 import ru.binarysimple.order.dto.*;
 import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.model.OperationType;
 import ru.binarysimple.order.model.Order;
+import ru.binarysimple.order.model.OrderStatus;
+
+import java.net.URI;
 
 @Component
 @Slf4j
@@ -23,7 +27,7 @@ public class BillingServiceClient {
     @Autowired
     public BillingServiceClient(@Value("${endpoints.billing-service:http://test-name:8081}") String baseUrl) {
 
-        log.info("BillingServiceClient baseUrl: {}", baseUrl);
+        log.info("UsersServiceClient baseUrl: {}", baseUrl);
         this.baseUrl = baseUrl;
 
         this.restClient = RestClient.builder()
@@ -31,7 +35,7 @@ public class BillingServiceClient {
                 .build();
     }
 
-    private OperationDto executeOperation(Order order, OperationType operationType, String operationName) {
+    private OperationDto executeOperation(OrderResultDto order, OperationType operationType, String operationName) {
         log.info("Initiating {} for order {}", operationName, order.getId());
 
         OperationRequest operationRequest = new OperationRequest(
@@ -65,27 +69,11 @@ public class BillingServiceClient {
         }
     }
 
-    public OperationDto makePayment(Order order) {
+    public OperationDto makePayment(OrderResultDto order) {
         return executeOperation(order, OperationType.PAYMENT, "payment");
     }
 
-    public OperationDto cancelPayment(Order order) {
+    public OperationDto cancelPayment(OrderResultDto order) {
         return executeOperation(order, OperationType.REFUND, "canceling payment");
     }
-
-//    public OperationDto reserveFunds(Order order) {
-//        return executeOperation(order, OperationType.RESERVE, "fund reservation");
-//    }
-//
-//    public OperationDto confirmPayment(Order order) {
-//        return executeOperation(order, OperationType.CONFIRM, "payment confirmation");
-//    }
-//
-//    public OperationDto cancelReservation(Order order) {
-//        return executeOperation(order, OperationType.CANCEL_RESERVATION, "reservation cancellation");
-//    }
-//
-//    public OperationDto refundPayment(Order order) {
-//        return executeOperation(order, OperationType.REFUND, "refund");
-//    }
 }

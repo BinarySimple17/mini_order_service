@@ -46,6 +46,12 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: order-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: ru.binarysimple.order.saga.events,ru.binarysimple.order.dto.*, ru.binarysimple.order.model.*
 
 server:
   port: 8080
@@ -91,4 +97,11 @@ info:
 app:
   kafka:
     topics:
-      order-events: order.events
+      order-events: notification.events.order
+  saga:
+    retry-max-count: 3
+    recover-interval: 300000
+  outbox:
+    retry-max-count: 3
+    send-timeout-seconds: 5
+    interval: 5000

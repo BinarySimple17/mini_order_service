@@ -1,17 +1,16 @@
-package ru.binarysimple.order.saga.events;
+package ru.binarysimple.order.event;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import ru.binarysimple.order.dto.OrderResultDto;
+import ru.binarysimple.order.model.Order;
 
 import java.util.UUID;
 
 @Getter
 @RequiredArgsConstructor
-public class OrderPaidEvent {
-    private final OrderResultDto order;
+public class OrderCreatedEvent {
+    private final Order order;
     private final String source;
-    private final UUID sagaId;
     private final String eventId = UUID.randomUUID().toString(); // Уникальный ID события
     private final long timestamp = System.currentTimeMillis();
 }

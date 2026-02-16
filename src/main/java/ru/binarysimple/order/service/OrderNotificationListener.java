@@ -7,8 +7,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import ru.binarysimple.order.mapper.OrderMapper;
-import ru.binarysimple.order.saga.events.OrderCreatedEvent;
+import ru.binarysimple.order.event.OrderCreatedEvent;
 
 @Slf4j
 @Service
@@ -21,8 +20,8 @@ public class OrderNotificationListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleOrderCreatedEvent(OrderCreatedEvent event) {
 
-        log.debug("Processing notification for order {}", event.getOrder().getId());
+//        log.debug("Processing notification for order {}", event.getOrder().getId());
 
-        notificationService.sendNotification(event.getOrder());
+//        notificationService.sendNotification(event.getOrder());
     }
 }
