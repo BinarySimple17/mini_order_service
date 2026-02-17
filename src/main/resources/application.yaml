@@ -29,23 +29,23 @@ spring:
     default-schema: order_db
     enabled: true
 
-#  kafka:
-#    bootstrap-servers: localhost:9092
-#
-##    properties:
-##      security.protocol: SASL_PLAINTEXT
-##      sasl.mechanism: PLAIN
-##      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
-#
-#    producer:
-#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-#    consumer:
-#      group-id: order-group
-#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-#      properties:
-#        spring.json.trusted.packages: ru.binarysimple.order.saga.events,ru.binarysimple.order.dto.*, ru.binarysimple.order.model.*
+  kafka:
+    bootstrap-servers: localhost:9092
+
+#    properties:
+#      security.protocol: SASL_PLAINTEXT
+#      sasl.mechanism: PLAIN
+#      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USER:user1}" password="${KAFKA_PASSWORD}";
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: order-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: ru.binarysimple.order.saga.events,ru.binarysimple.order.dto.*, ru.binarysimple.order.model.*
 
 server:
   port: 8080

@@ -1,16 +1,17 @@
 package ru.binarysimple.order.kafka;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.*;
 import ru.binarysimple.order.model.NotificationContact;
 import ru.binarysimple.order.model.NotificationType;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OrderEvent {
 //    private Long orderId;
 
