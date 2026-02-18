@@ -44,7 +44,7 @@ public class DeliveryStep implements SagaStep {
 
         log.info("Delivery requested for order {} via saga {}", order.getId(), saga.getId());
 
-        notificationService.sendNotification(saga,order, EVENT_TYPE);
+//        notificationService.sendNotification(saga,order, EVENT_TYPE);
     }
 
     @Override
@@ -62,7 +62,7 @@ public class DeliveryStep implements SagaStep {
                 failedEvent,
                 "warehouse.compensate.request");
 
-        notificationService.sendNotification(saga,order, COMPENSATE_EVENT_TYPE);
+//        notificationService.sendNotification(saga,order, COMPENSATE_EVENT_TYPE);
     }
 
     @Override
