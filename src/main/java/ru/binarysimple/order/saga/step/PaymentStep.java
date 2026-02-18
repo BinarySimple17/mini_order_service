@@ -55,7 +55,7 @@ public class PaymentStep implements SagaStep {
 
         log.info("Payment requested for order {} via saga {}", order.getId(), saga.getId());
 
-        notificationService.sendNotification(saga,order, EVENT_TYPE);
+//        notificationService.sendNotification(saga,order, EVENT_TYPE);
     }
 
     @Override
@@ -83,7 +83,7 @@ public class PaymentStep implements SagaStep {
                 failedEvent,
                 "payment.response.compensation");
 
-        notificationService.sendNotification(saga,order, COMPENSATE_EVENT_TYPE);
+//        notificationService.sendNotification(saga,order, COMPENSATE_EVENT_TYPE);
     }
 
     @Override

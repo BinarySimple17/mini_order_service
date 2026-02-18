@@ -28,13 +28,13 @@ public class FinalStep implements SagaStep {
 
         saga.setState(STEP_SAGA_STATE);
 
-        notificationService.sendNotification(saga,order, EVENT_TYPE);
+//        notificationService.sendNotification(saga,order, EVENT_TYPE);
     }
 
     @Override
     public void compensate(OrderSaga saga, OrderResultDto order, String reason) {
 
-        notificationService.sendNotification(saga,order, COMPENSATE_EVENT_TYPE);
+//        notificationService.sendNotification(saga,order, COMPENSATE_EVENT_TYPE);
     }
 
     @Override
