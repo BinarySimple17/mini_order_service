@@ -2,6 +2,7 @@ package ru.binarysimple.order.model;
 
 public enum EventType {
 
+    COMPENSATION_FAILED,
     FINAL_COMPENSATION,
     FINAL_NOTIFICATION,
 

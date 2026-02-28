@@ -2,6 +2,7 @@ package ru.binarysimple.order.saga.processor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.retrytopic.RetryTopicConfiguration;
 import org.springframework.stereotype.Component;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.EventType;
@@ -15,6 +16,7 @@ import ru.binarysimple.order.saga.events.SagaEvents;
 import ru.binarysimple.order.service.NotificationService;
 
 import static ru.binarysimple.order.model.OrderStatus.CANCELED;
+import static ru.binarysimple.order.model.OrderStatus.FAILED;
 
 
 @Component
@@ -38,15 +40,24 @@ public class WarehouseCompensationResponseProcessor implements EventProcessor<Sa
         OrderSaga saga = sagaRepository.findById(event.getSagaId()).orElseThrow(() ->
                 new RuntimeException("WarehouseCompensationResponseProcessor saga not found " + event.getSagaId()));
 
-
         Order order = orderRepository
                 .findById(saga.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found: " + saga.getOrderId()));
+
+
+        //если неудача компенсации, то не сдвигаем статус и будут еще попытки в recoverFailedSagas
+        if (!event.getSuccess()) {
+            saga.setRetryCountCompensation(saga.getRetryCountCompensation() + 1);
+            sagaRepository.save(saga);
+            return;
+        }
+
         sagaCompensator.compensateWarehouse(saga, orderMapper.toOrderResultDto(order));
         sagaRepository.save(saga);
         if (saga.getState() == OrderSaga.SagaState.COMPENSATED) {
             setOrderStatus(order, CANCELED);
         }
+
         log.info("Warehouse compensation successful, saga {} moved to {}", saga.getId(), saga.getState());
         notificationService.sendNotification(saga, event.getOrder(), EventType.WAREHOUSE_COMPENSATION_COMPLETED);
     }

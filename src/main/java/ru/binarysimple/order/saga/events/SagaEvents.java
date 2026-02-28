@@ -155,6 +155,8 @@ public class SagaEvents {
 
         private Long orderId;
 
+        private Boolean success = true;
+
         private final UUID eventId = UUID.randomUUID();
 
         private String username;
