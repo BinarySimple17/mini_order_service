@@ -26,7 +26,7 @@ public class SagaRecoveryService {
 
     private final SagaCompensator sagaCompensator;
 
-    private final Integer retryMaxCount = 2;
+    private final Integer retryMaxCount = 3;
 
     private static String getErrorCompensatedMessage(OrderSaga saga) {
         return String.format("Compensation error at step [%s]", saga.getState());

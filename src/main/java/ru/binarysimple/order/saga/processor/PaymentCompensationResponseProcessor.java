@@ -42,13 +42,21 @@ public class PaymentCompensationResponseProcessor implements EventProcessor<Saga
         Order order = orderRepository
                 .findById(saga.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found: " + saga.getOrderId()));
+
+        //если неудача компенсации, то не сдвигаем статус и будут еще попытки в recoverFailedSagas
+        if (!event.getSuccess()) {
+            saga.setRetryCountCompensation(saga.getRetryCountCompensation() + 1);
+            sagaRepository.save(saga);
+            return;
+        }
+
         sagaCompensator.compensatePayment(saga, orderMapper.toOrderResultDto(order));
         sagaRepository.save(saga);
         if (saga.getState() == OrderSaga.SagaState.COMPENSATED) {
             setOrderStatus(order, CANCELED);
         }
         log.info("Payment compensation successful, saga {} moved to {}", saga.getId(), saga.getState());
-        notificationService.sendNotification(saga, orderMapper.toOrderResultDto(order), EventType.PAYMENT_COMPENSATION_COMPLETED);
+//        notificationService.sendNotification(saga, orderMapper.toOrderResultDto(order), EventType.PAYMENT_COMPENSATION_COMPLETED);
     }
 
     private void setOrderStatus(Order order, OrderStatus status) {

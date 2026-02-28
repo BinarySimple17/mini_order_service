@@ -33,6 +33,8 @@ public class OrderSaga {
     private String payload;
     @Column(name = "retry_count", nullable = false)
     private Integer retryCount = 0;
+    @Column(name = "retry_count_comp", nullable = false)
+    private Integer retryCountCompensation = 0;
     @CreationTimestamp
     @Column(
             name = "created_at",
@@ -48,18 +50,6 @@ public class OrderSaga {
     private LocalDateTime updatedAt;
     @Column(name = "step_flag")
     private Integer stepFlag = 0;
-
-//    public boolean isFailed() {
-//        return this.state == SagaState.FAILED;
-//    }
-//
-//    public boolean isCurrentFinished() {
-//        return (this.state == SagaState.COMPLETED || this.state == SagaState.COMPENSATED);
-//    }
-
-//    public boolean isCompleted() {
-//        return (this.currentStep == SagaStep.DELIVERY) && isCurrentFinished();
-//    }
 
     // Методы для получения состояния битов
     public boolean isPaymentExecuted() {
@@ -106,6 +96,7 @@ public class OrderSaga {
     @Getter
     public enum SagaState {
         STARTED("Started"),
+        COMPENSATION_FAILED("Compensation Failed"),
         PAYMENT_PROCESSING("Payment processing"),
         PAYMENT_COMPLETED("Payment completed"),
         PAYMENT_FAILED("Payment failed"),

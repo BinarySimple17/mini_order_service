@@ -17,11 +17,18 @@ public class SagaCompensator {
 
     private final SagaStateMachine sagaStateMachine;
 
+    private final Integer retryMaxCount = 0;
+
     public void executeCompensation(OrderSaga saga, OrderResultDto order, String reason) {
         log.info("Executing compensation for saga {}: {}", saga.getId(), reason);
 
         if (saga.isFullyCompensated()) {
             finalCompensated(saga, order);
+            return;
+        }
+
+        if (saga.getRetryCountCompensation() >= retryMaxCount) {
+            finalFailed(saga, order);
             return;
         }
 
@@ -81,6 +88,18 @@ public class SagaCompensator {
             saga.setState(OrderSaga.SagaState.COMPENSATED);
         } catch (Exception e) {
             log.error("FULLY Compensation failed for saga {}: {}", saga.getId(), e.getMessage());
+        }
+    }
+
+    private void finalFailed(OrderSaga saga, OrderResultDto order) {
+        log.info("Sending final failed compensation for saga {}", saga.getId());
+
+        try {
+            String compensationReason = "Compensation failed";
+            sagaStateMachine.compensate(saga, order, compensationReason, EventType.COMPENSATION_FAILED);
+            saga.setState(OrderSaga.SagaState.COMPENSATION_FAILED);
+        } catch (Exception e) {
+            log.error("Compensation failed for saga {}: {}", saga.getId(), e.getMessage());
         }
     }
 }
