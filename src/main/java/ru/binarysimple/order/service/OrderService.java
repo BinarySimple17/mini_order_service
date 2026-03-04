@@ -16,7 +16,7 @@ public interface OrderService {
 
     List<OrderResultDto> getMany(List<Long> ids);
 
-    OrderResultDto create(OrderDto dto);
+    OrderResultDto create(OrderDto dto, String idempotencyKey);
 
 //    OrderResultDto patch(Long id, JsonNode patchNode) throws IOException;
 
