@@ -34,11 +34,13 @@ public class OrderController {
     }
 
     @PostMapping
-    public OrderResultDto create(@RequestHeader("X-Username") String currentUsername, @RequestBody @Valid OrderDto dto) {
+    public OrderResultDto create(@RequestHeader(value = "X-Username", required = false) String currentUsername, 
+                                 @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                 @RequestBody @Valid OrderDto dto) {
         if (!currentUsername.equals(dto.getUsername())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
-        return orderService.create(dto);
+        return orderService.create(dto, idempotencyKey);
     }
 
     @DeleteMapping("/{id}")

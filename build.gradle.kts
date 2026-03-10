@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "ru.binarysimple"
-version = "0.0.3"
+version = "0.0.4"
 description = "Order Service"
 
 java {
