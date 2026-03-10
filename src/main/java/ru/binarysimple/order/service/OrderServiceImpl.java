@@ -1,34 +1,23 @@
 package ru.binarysimple.order.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import ru.binarysimple.order.client.BillingServiceClient;
-import ru.binarysimple.order.dto.OperationDto;
 import ru.binarysimple.order.dto.OrderDto;
 import ru.binarysimple.order.dto.OrderResultDto;
-import ru.binarysimple.order.event.OrderCreatedEvent;
-import ru.binarysimple.order.exception.BillingServiceException;
 import ru.binarysimple.order.mapper.OrderMapper;
 import ru.binarysimple.order.model.IdempotencyRecord;
 import ru.binarysimple.order.model.Order;
-import ru.binarysimple.order.model.OrderPosition;
 import ru.binarysimple.order.model.OrderStatus;
-import ru.binarysimple.order.model.saga.OrderSaga;
 import ru.binarysimple.order.repository.IdempotencyRepository;
 import ru.binarysimple.order.repository.OrderRepository;
 import ru.binarysimple.order.saga.OrderSagaManager;
 
-import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,13 +29,13 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
 
-    private final ObjectMapper objectMapper;
+//    private final ObjectMapper objectMapper;
 
     private final OrderSagaManager orderSagaManager;
 
-    private final BillingServiceClient billingServiceClient;
+//    private final BillingServiceClient billingServiceClient;
 
-    private final ApplicationEventPublisher eventPublisher;
+//    private final ApplicationEventPublisher eventPublisher;
 
     private final IdempotencyRepository idempotencyRepository;
 
@@ -73,12 +62,12 @@ public class OrderServiceImpl implements OrderService {
     public OrderResultDto create(OrderDto dto, String idempotencyKey) {
         // 1. Проверка на существование записи идемпотентности
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            Optional<IdempotencyRecord> existingRecord = 
-                idempotencyRepository.findByIdempotencyKey(idempotencyKey);
-            
+            Optional<IdempotencyRecord> existingRecord =
+                    idempotencyRepository.findByIdempotencyKey(idempotencyKey);
+
             if (existingRecord.isPresent()) {
                 IdempotencyRecord record = existingRecord.get();
-                
+
                 // Если запись ещё не истекла — возвращаем сохранённый результат
                 if (record.getExpiresAt().isAfter(java.time.LocalDateTime.now())) {
                     return retrieveCachedResult(record.getOrderId());
@@ -106,10 +95,6 @@ public class OrderServiceImpl implements OrderService {
             record.setIdempotencyKey(idempotencyKey);
             record.setOrderId(resultOrder.getId());
             record.setUsername(dto.getUsername());
-            record.setTotalCost(dto.getTotalCost());
-            record.setShopId(dto.getShopId());
-            record.setDeliveryId(dto.getDeliveryId());
-            record.setStatus(resultOrder.getStatus().name());
             record.setCreatedAt(java.time.LocalDateTime.now());
             record.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(IdempotencyRecord.EXPIRY_MINUTES));
             idempotencyRepository.save(record);
@@ -121,7 +106,7 @@ public class OrderServiceImpl implements OrderService {
     private OrderResultDto retrieveCachedResult(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Order with id `%s` not found".formatted(orderId)
+                        HttpStatus.NOT_FOUND, "Order with id `%s` not found".formatted(orderId)
                 ));
         return orderMapper.toOrderResultDto(order);
     }
