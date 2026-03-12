@@ -9,7 +9,6 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Глобальный обработчик исключений для идемпотентности.
  * Обрабатывает DataIntegrityViolationException при создании записи идемпотентности
- * (когда запрос приходит параллельно с тем же ключом).
  */
 @Slf4j
 @RestControllerAdvice
